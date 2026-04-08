@@ -26,12 +26,16 @@ class Medication(Base):
         Uuid, ForeignKey("patients.id"), nullable=False
     )
 
-    name: Mapped[str] = mapped_column(String(MEDICATION_NAME_MAX_LENGTH), nullable=False)
-    
+    name: Mapped[str] = mapped_column(
+        String(MEDICATION_NAME_MAX_LENGTH), nullable=False
+    )
+
     # 劑型
     dosage_form: Mapped[DosageForm] = mapped_column(Enum(DosageForm), nullable=False)
 
-    note: Mapped[str] = mapped_column(String(MEDICATION_NOTE_MAX_LENGTH), nullable=True)
+    note: Mapped[str] = mapped_column(
+        String(MEDICATION_NOTE_MAX_LENGTH), nullable=False, default=""
+    )
 
     # 創建時間
     created_at: Mapped[datetime] = mapped_column(
