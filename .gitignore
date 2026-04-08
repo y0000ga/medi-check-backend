@@ -8,12 +8,25 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.pyre/
+.pytype/
+.tox/
+.nox/
 .coverage
+coverage.xml
 htmlcov/
 app.db
+*.db-journal
+*.sqlite3
+*.sqlite3-journal
 .env
+.env.*
+!.env.example
 
 NOTE.md
 
-.vscode
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
 .uv-cache
