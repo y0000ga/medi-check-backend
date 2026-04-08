@@ -1,11 +1,12 @@
+import uuid
+
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, select
 
-from app.core.enums.care_relationship import RelationshipStatus
+from app.core.enums.care_relationship import PermissionLevel, RelationshipStatus
 from app.models import CareRelationship
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.care_relationship import (
-    CareRelationshipResponse,
     DetailCareRelationshipQuery,
     ListCareRelationshipQuery,
 )
@@ -37,7 +38,7 @@ def _get_order_column(query: ListCareRelationshipQuery):
 def list_care_relationships(
     db: Session,
     query: ListCareRelationshipQuery,
-) -> list[CareRelationshipResponse]:
+) -> list[CareRelationship]:
 
     stmt = _build_list_stmt(query)
     order_column = _get_order_column(query)
@@ -79,3 +80,27 @@ def get_active_care_relationship(
             ),
         )
     )
+
+
+def add_care_relationship(
+    db: Session,
+    caregiver_user_id: uuid.UUID,
+    created_by_user_id: uuid.UUID,
+    patient_id: uuid.UUID,
+    invitation_id: uuid.UUID | None,
+    permission_level: PermissionLevel,
+) -> CareRelationship:
+    care_relationship = CareRelationship(
+        caregiver_user_id=caregiver_user_id,
+        created_by_user_id=created_by_user_id,
+        patient_id=patient_id,
+        invitation_id=invitation_id,
+        permission_level=permission_level,
+        status=RelationshipStatus.ACTIVE,
+    )
+
+    db.add(care_relationship)
+    db.flush()
+    return care_relationship
+
+

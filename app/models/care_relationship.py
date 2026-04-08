@@ -30,12 +30,17 @@ class CareRelationship(Base):
         Uuid, ForeignKey("users.id"), nullable=False
     )
 
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id"), nullable=False
+    )
+
     # 被照顧的病人 (當邀請被確認後，就會建立 Patient 資料並填進來)
     patient_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("patients.id"), nullable=False
     )
 
     # 關係來源邀請，可追溯是哪一筆 invitation 成立的
+    # 如果 Patient 其實沒有 linked_user_id 時，就不會有
     invitation_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("care_invitations.id"), nullable=True
     )
@@ -52,7 +57,7 @@ class CareRelationship(Base):
 
     # 測銷關係的時間
     revoked_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        DateTime(timezone=True), nullable=True, default=None
     )
 
     created_at: Mapped[datetime] = mapped_column(
@@ -65,4 +70,3 @@ class CareRelationship(Base):
         onupdate=lambda: datetime.now(UTC),
         nullable=False,
     )
-
