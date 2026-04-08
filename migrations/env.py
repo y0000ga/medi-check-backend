@@ -26,6 +26,8 @@ from app.models import (
     Patient,
     CareInvitation,
     CareRelationship,
+    Schedule,
+    History,
 )
 
 target_metadata = Base.metadata
