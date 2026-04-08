@@ -12,13 +12,14 @@ class CareRelationshipResponse(BaseModel):
     patient_id: uuid.UUID
     permission_level: str
 
+
 class ListCareRelationshipQuery(PaginationRequest):
     permission_level: PermissionLevel | None = None
     user_id: uuid.UUID
 
 
-class ListCareRelationshipRequest(ListCareRelationshipQuery):
-    pass
+class ListCareRelationshipQueryParams(PaginationRequest):
+    permission_level: PermissionLevel | None = None
 
 
 class ListCareRelationshipPayload(ListCareRelationshipQuery):
@@ -27,6 +28,7 @@ class ListCareRelationshipPayload(ListCareRelationshipQuery):
 
 class ListCareRelationshipResponse(PaginationResponse):
     list: list[CareRelationshipResponse]
+
 
 class DetailCareRelationshipQuery(BaseModel):
     caregiver_user_id: uuid.UUID

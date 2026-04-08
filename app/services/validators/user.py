@@ -1,6 +1,6 @@
 # 驗證合理存在的 user
 from app.core.enums.user import UserStatus
-from app.models.user import User
+from app.models import User
 from app.services.errors.auth import invalid_user_status
 from app.services.errors.user import invalid_access_token_error
 

@@ -2,32 +2,37 @@ import uuid
 
 from sqlalchemy.orm import Session
 
-from app.repositories.care_relationship import get_care_relationship_detail
-from app.repositories.patient import get_patient_by_user_id
+from app.core.enums.care_relationship import PermissionLevel
+from app.repositories.care_relationship import get_active_care_relationship
+from app.repositories.patient import get_patient_by_id
 from app.schemas.care_relationship import DetailCareRelationshipQuery
+from app.services.access import PatientAccess
+from app.services.errors.patient import patient_access_denied_error
 
 
-# 要先確認該 user_id 是否具備檢視該 patient 權限
-# 要不是自己的(user_id === linked_user_id) 或有 care_relationship
 def validate_patient_access(
     db: Session, user_id: uuid.UUID, patient_id: uuid.UUID
-) -> bool:
+) -> PatientAccess:
+    target_patient = get_patient_by_id(patient_id=patient_id, db=db)
 
-    existed_patient = get_patient_by_user_id(user_id=user_id, db=db)
+    if target_patient is None:
+        raise patient_access_denied_error()
 
-    if existed_patient is None:
-        return False
-
-    if existed_patient.linked_user_id == user_id:
-        return True
+    if target_patient.linked_user_id == user_id:
+        return PatientAccess(
+            patient=target_patient, permission_level=PermissionLevel.WRITE
+        )
 
     query = DetailCareRelationshipQuery(
         caregiver_user_id=user_id, patient_id=patient_id
     )
 
-    existed_care_relationship = get_care_relationship_detail(db=db, query=query)
+    existed_care_relationship = get_active_care_relationship(db=db, query=query)
 
     if existed_care_relationship is None:
-        return False
+        raise patient_access_denied_error()
 
-    return True
+    return PatientAccess(
+        patient=target_patient,
+        permission_level=existed_care_relationship.permission_level,
+    )

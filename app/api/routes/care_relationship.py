@@ -1,0 +1,35 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.core.response import success_response
+from app.db.session import get_db
+from app.dependencies.user import get_current_user
+from app.models import User
+from app.schemas.care_relationship import (
+    ListCareRelationshipPayload,
+    ListCareRelationshipQueryParams,
+    ListCareRelationshipResponse,
+)
+from app.schemas.base import ApiResponse
+from app.services.care_relationship import get_care_relationship_list
+
+router = APIRouter(prefix="/care-relationships", tags=["care-relationship"])
+
+
+# 取得照顧關係列表
+@router.get("")
+def get_care_relationships(
+    query: ListCareRelationshipQueryParams = Depends(),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[ListCareRelationshipResponse]:
+    payload = ListCareRelationshipPayload(
+        page=query.page,
+        page_size=query.page_size,
+        sort_by=query.sort_by,
+        sort_order=query.sort_order,
+        user_id=user.id,
+        permission_level=query.permission_level,
+    )
+    response = get_care_relationship_list(payload=payload, db=db)
+    return success_response(response)

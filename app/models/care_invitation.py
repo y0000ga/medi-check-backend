@@ -1,6 +1,7 @@
 import uuid
 
 from app.db.base import Base
+from app.core.validation_rules import EMAIL_MAX_LENGTH
 
 from datetime import datetime, UTC
 from sqlalchemy import Uuid, ForeignKey, String, DateTime, Enum
@@ -30,7 +31,7 @@ class CareInvitation(Base):
 
     # 被邀請者 email
     invitee_email: Mapped[str] = mapped_column(
-        String(255), nullable=False, index=True
+        String(EMAIL_MAX_LENGTH), nullable=False, index=True
     )
 
     # 如果被邀請者已經有帳號，可以先對到 user；沒有則為 null

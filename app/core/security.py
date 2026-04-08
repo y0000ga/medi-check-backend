@@ -124,11 +124,11 @@ def get_bearer_token_from_header(request: Request) -> str:
     authorization = request.headers.get("Authorization")
 
     if not authorization:
-        raise Exception("Missing Authorization header")
+        raise invalid_access_token_error()
 
     scheme, _, token = authorization.partition(" ")
 
     if scheme.lower() != "bearer" or not token:
-        raise Exception("Invalid Authorization header")
+        raise invalid_access_token_error()
 
     return token

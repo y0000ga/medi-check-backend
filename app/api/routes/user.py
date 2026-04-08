@@ -4,12 +4,12 @@ from sqlalchemy.orm import Session
 from app.core.response import success_response
 from app.db.session import get_db
 from app.dependencies.user import get_current_user
-from app.models.user import User
+from app.models import User
 from app.schemas.base import ApiResponse
-from app.schemas.user import EditUserMeRequest, EditUserResponse, UserResponse
-from app.services.user import edit_me
+from app.schemas.user import EditUserMeBody, EditUserResponse, UserResponse
+from app.services.user import edit_current_user
 
-router = APIRouter(prefix="/user", tags=["user"])
+router = APIRouter(prefix="/users", tags=["user"])
 
 
 @router.get("/me")
@@ -27,9 +27,9 @@ def get_user_me(user: User = Depends(get_current_user)) -> ApiResponse[UserRespo
 
 @router.patch("/me")
 def edit_user_me(
-    request_data: EditUserMeRequest,
+    body: EditUserMeBody,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[EditUserResponse]:
-    response = edit_me(payload=request_data, user=user, db=db)
+    response = edit_current_user(payload=body, user=user, db=db)
     return success_response(response)

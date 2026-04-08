@@ -1,9 +1,16 @@
+import uuid
+
 from sqlalchemy.orm import Session
-from sqlalchemy import func, select
-from app.models.medication import Medication
+from sqlalchemy import delete, func, select
+from app.core.enums.medication import DosageForm
+from app.core.validation_rules import (
+    MEDICATION_NAME_MAX_LENGTH,
+    MEDICATION_NAME_MIN_LENGTH,
+)
+from app.models import Medication
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.medication import ListMedicationQuery
-from app.services.validators.base import validate_optional_string_field
+from app.core.validators import validate_optional_string_field
 
 
 def _get_order_column(query: ListMedicationQuery):
@@ -23,14 +30,14 @@ def _build_list_stmt(query: ListMedicationQuery):
         Medication.patient_id == query.patient_id,
     )
 
-    if query.dosageForm is not None:
-        stmt = stmt.where(Medication.dosage_form == query.dosageForm)
+    if query.dosage_form is not None:
+        stmt = stmt.where(Medication.dosage_form == query.dosage_form)
 
     normalized_name = validate_optional_string_field(
         field_name="name",
         value=query.name,
-        max_length=100,
-        min_length=1,
+        max_length=MEDICATION_NAME_MAX_LENGTH,
+        min_length=MEDICATION_NAME_MIN_LENGTH,
         trim=True,
         empty_as_none=True,
     )
@@ -53,10 +60,55 @@ def list_medications(db: Session, query: ListMedicationQuery) -> list[Medication
     return list(result.scalars().all())
 
 
-def count_medications_list(db: Session, query: ListMedicationQuery) -> int:
+def count_medications(db: Session, query: ListMedicationQuery) -> int:
     stmt = _build_list_stmt(query)
     # with_only_columns(func.count()) 代表查總數
     # order_by(None) 代表不排序
     stmt = stmt.with_only_columns(func.count()).order_by(None)
 
     return db.scalar(stmt) or 0
+
+
+def get_medication_by_id(
+    db: Session, medication_id: uuid.UUID
+) -> Medication | None:
+    stmt = select(Medication).where(
+        Medication.id == medication_id
+    )
+    result = db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+def create_medication(
+    db: Session,
+    patient_id: uuid.UUID,
+    name: str,
+    note: str | None,
+    dosage_form: DosageForm,
+) -> Medication:
+    medication = Medication(
+        patient_id=patient_id, name=name, note=note, dosage_form=dosage_form
+    )
+
+    db.add(medication)
+    db.flush()
+    return medication
+
+
+def delete_medication_by_id(
+    medication_id: uuid.UUID,
+    db: Session,
+) -> None:
+    db.execute(
+        delete(Medication).where(
+            Medication.id == medication_id,
+        )
+    )
+
+def edit_medication_by_id(
+        medication_id:uuid.UUID,
+        name:str|None,
+        note: str | None,
+        dosage_form: DosageForm | None
+) -> None:
+    return None

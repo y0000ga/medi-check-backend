@@ -1,12 +1,10 @@
 from datetime import UTC, datetime
 import uuid
 
-from fastapi import Depends
 from sqlalchemy.orm import Session
 
 from app.core.security import verify_password
-from app.db.session import get_db
-from app.models.user_session import UserSession
+from app.models import UserSession
 from app.repositories.user_session import get_user_session_by_token_id
 from app.services.errors.auth import (
     expired_refresh_token_error,
@@ -41,11 +39,11 @@ def validate_user_session(
     return user_session
 
 
-def get_current_user_session(
+def get_valid_user_session(
+    db: Session,
     token_id: uuid.UUID,
     user_id: uuid.UUID,
     refresh_token: str,
-    db: Session = Depends(get_db),
 ) -> UserSession:
     user_session = get_user_session_by_token_id(db=db, token_id=token_id)
 

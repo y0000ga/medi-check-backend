@@ -3,8 +3,7 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.orm import Session
 
 from app.core.enums.care_relationship import PermissionLevel, RelationshipStatus
-from app.models.care_relationship import CareRelationship
-from app.models.patient import Patient
+from app.models import CareRelationship, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.patient import ListPatientsQuery
 
@@ -50,6 +49,11 @@ def get_patient_by_user_id(db: Session, user_id: uuid.UUID) -> Patient | None:
     return result.scalar_one_or_none()
 
 
+def get_patient_by_id(db: Session, patient_id: uuid.UUID) -> Patient | None:
+    result = db.execute(select(Patient).where(Patient.id == patient_id))
+    return result.scalar_one_or_none()
+
+
 def list_patients(
     db: Session, query: ListPatientsQuery
 ) -> list[Row[tuple[Patient, PermissionLevel]]]:
@@ -69,7 +73,7 @@ def list_patients(
     return list(rows)
 
 
-def count_patients_list(db: Session, query: ListPatientsQuery) -> int:
+def count_patients(db: Session, query: ListPatientsQuery) -> int:
     stmt = _build_list_stmt(query)
     # with_only_columns(func.count()) 代表查總數
     # order_by(None) 代表不排序

@@ -1,6 +1,7 @@
 import uuid
 
 from app.db.base import Base
+from app.core.validation_rules import AVATAR_URL_MAX_LENGTH, NAME_MAX_LENGTH
 
 from datetime import datetime, UTC
 from sqlalchemy import Uuid, ForeignKey, String, DateTime
@@ -25,7 +26,7 @@ class Patient(Base):
         nullable=True,
     )
     # 病人名稱
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), nullable=False)
 
     # 病人生日
     birth_date: Mapped[datetime | None] = mapped_column(
@@ -33,7 +34,9 @@ class Patient(Base):
     )
 
     # 病人圖片 (之後要考慮 Storage 的問題)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(
+        String(AVATAR_URL_MAX_LENGTH), nullable=True
+    )
 
     # 創建時間
     created_at: Mapped[datetime] = mapped_column(

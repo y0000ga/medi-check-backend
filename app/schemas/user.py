@@ -13,7 +13,7 @@ class UserResponse(BaseModel):
     status: UserStatus
 
 
-class EditUserMeRequest(BaseModel):
+class EditUserMeBody(BaseModel):
     name: str | None = None
     avatar_url: str | None = None
 

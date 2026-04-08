@@ -2,8 +2,7 @@ import uuid
 from pydantic import BaseModel, EmailStr
 
 
-# Common
-class AuthRequestBase(BaseModel):
+class AuthBodyBase(BaseModel):
     email: EmailStr
     password: str
 
@@ -17,14 +16,11 @@ class AuthServiceResult(AuthPublicResponse):
     refresh_token: str
 
 
-# Sign up
-
-
-class SignUpRequest(AuthRequestBase):
+class SignUpBody(AuthBodyBase):
     name: str
 
 
-class SignUpPayload(SignUpRequest):
+class SignUpPayload(SignUpBody):
     pass
 
 
@@ -36,12 +32,11 @@ class SignUpResponse(AuthPublicResponse):
     pass
 
 
-# Sign In
-class SignInRequest(AuthRequestBase):
+class SignInBody(AuthBodyBase):
     pass
 
 
-class SignInPayload(SignInRequest):
+class SignInPayload(SignInBody):
     pass
 
 

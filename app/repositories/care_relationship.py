@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, select
 
 from app.core.enums.care_relationship import RelationshipStatus
-from app.models.care_relationship import CareRelationship
+from app.models import CareRelationship
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.care_relationship import (
     CareRelationshipResponse,
@@ -11,7 +11,7 @@ from app.schemas.care_relationship import (
 )
 
 
-def _build_care_relationship_list_stmt(query: ListCareRelationshipQuery):
+def _build_list_stmt(query: ListCareRelationshipQuery):
     stmt = select(CareRelationship).where(
         CareRelationship.caregiver_user_id == query.user_id,
         and_(
@@ -26,7 +26,7 @@ def _build_care_relationship_list_stmt(query: ListCareRelationshipQuery):
     return stmt
 
 
-def _get_care_relationship_order_column(query: ListCareRelationshipQuery):
+def _get_order_column(query: ListCareRelationshipQuery):
     if query.sort_by == "updated_at":
         return CareRelationship.updated_at
     if query.sort_by == "permission_level":
@@ -39,8 +39,8 @@ def list_care_relationships(
     query: ListCareRelationshipQuery,
 ) -> list[CareRelationshipResponse]:
 
-    stmt = _build_care_relationship_list_stmt(query)
-    order_column = _get_care_relationship_order_column(query)
+    stmt = _build_list_stmt(query)
+    order_column = _get_order_column(query)
 
     stmt = apply_sort_order(
         stmt, order_column=order_column, sort_order=query.sort_order
@@ -53,11 +53,11 @@ def list_care_relationships(
     return list(result.scalars().all())
 
 
-def count_care_relationship_list(
+def count_care_relationships(
     db: Session,
     query: ListCareRelationshipQuery,
 ) -> int:
-    stmt = _build_care_relationship_list_stmt(query)
+    stmt = _build_list_stmt(query)
     # with_only_columns(func.count()) 代表查總數
     # order_by(None) 代表不排序
     stmt = stmt.with_only_columns(func.count()).order_by(None)
@@ -65,7 +65,7 @@ def count_care_relationship_list(
     return db.scalar(stmt) or 0
 
 
-def get_care_relationship_detail(
+def get_active_care_relationship(
     db: Session,
     query: DetailCareRelationshipQuery,
 ) -> CareRelationship | None:

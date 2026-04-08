@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.schemas.auth import (
-    SignUpRequest,
+    SignUpBody,
     SignUpPayload,
     SignUpResponse,
     SignInPayload,
-    SignInRequest,
+    SignInBody,
     SignInResponse,
     RefreshPayload,
     RefreshResponse,
@@ -31,12 +31,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 # refresh_token
 @router.post("/sign-in")
 def sign_in(
-    request_data: SignInRequest,
+    body: SignInBody,
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignInResponse]:
-    payload = SignInPayload(email=request_data.email, password=request_data.password)
+    payload = SignInPayload(email=body.email, password=body.password)
 
     result = sign_in_user(payload=payload, request=request, db=db)
 
@@ -56,13 +56,13 @@ def sign_in(
 # 註冊
 @router.post("/sign-up")
 def sign_up(
-    request_data: SignUpRequest,
+    body: SignUpBody,
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignUpResponse]:
     payload = SignUpPayload(
-        name=request_data.name, password=request_data.password, email=request_data.email
+        name=body.name, password=body.password, email=body.email
     )
 
     result = sign_up_user(payload=payload, request=request, db=db)
@@ -114,8 +114,8 @@ def logout(
     return success_response(None)
 
 # 忘記密碼
-@router.post("/forget-password")
-def forget_password():
+@router.post("/forgot-password")
+def forgot_password():
     return success_response(None)
 
 # 重設密碼

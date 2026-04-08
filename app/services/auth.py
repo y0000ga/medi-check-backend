@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from datetime import UTC, datetime
 from sqlalchemy.orm import Session
 
-from app.dependencies.user import validate_active_user
 from app.schemas.auth import (
     SignUpPayload,
     SignUpServiceResult,
@@ -42,8 +41,15 @@ from app.services.errors.auth import (
     sign_up_failed_error,
     duplicate_email_error,
 )
-from app.services.validators.auth import get_current_user_session
-from app.services.validators.base import validate_required_string_field
+from app.core.validation_rules import (
+    NAME_MAX_LENGTH,
+    NAME_MIN_LENGTH,
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_MIN_LENGTH,
+)
+from app.core.validators import validate_required_string_field
+from app.services.validators.auth import get_valid_user_session
+from app.services.validators.user import validate_active_user
 
 
 def sign_up_user(
@@ -60,14 +66,14 @@ def sign_up_user(
         normalized_name = validate_required_string_field(
             value=payload.name,
             field_name="name",
-            min_length=1,
-            max_length=100,
+            min_length=NAME_MIN_LENGTH,
+            max_length=NAME_MAX_LENGTH,
         )
         normalized_password = validate_required_string_field(
             value=payload.password,
             field_name="password",
-            min_length=10,
-            max_length=25
+            min_length=PASSWORD_MIN_LENGTH,
+            max_length=PASSWORD_MAX_LENGTH,
         )
 
         hashed_password = hash_password(normalized_password)
@@ -188,8 +194,11 @@ def refresh_user(
     try:
         # 查出這個 token 對應的有效 UserSession
         token_id, user_id = parse_refresh_token_ids(payload.refresh_token)
-        user_session = get_current_user_session(
-            refresh_token=payload.refresh_token, user_id=user_id, token_id=token_id
+        user_session = get_valid_user_session(
+            db=db,
+            refresh_token=payload.refresh_token,
+            user_id=user_id,
+            token_id=token_id,
         )
         now = datetime.now(UTC)
         # 先把舊 session 作廢

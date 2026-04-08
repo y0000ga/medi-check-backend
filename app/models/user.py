@@ -3,6 +3,12 @@ from datetime import datetime, UTC
 from sqlalchemy import String, Boolean, DateTime, Enum, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.enums.user import UserStatus
+from app.core.validation_rules import (
+    AVATAR_URL_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    NAME_MAX_LENGTH,
+    PASSWORD_HASH_MAX_LENGTH,
+)
 
 
 from app.db.base import Base
@@ -21,10 +27,10 @@ class User(Base):
     )
 
     # 使用者名稱 - 最多 100 字
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    name: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), nullable=False)
     # 使用者 Email
     email: Mapped[str] = mapped_column(
-        String(255),
+        String(EMAIL_MAX_LENGTH),
         unique=True,
         # 概念方向是「查詢會更快」，但 O(N) 這句不準。索引不是因為資料先被排序所以變成 O(N)；
         # 實際上索引通常是為了避免整張表掃描，查詢成本通常比全表掃描更低。
@@ -32,9 +38,13 @@ class User(Base):
         index=True,
     )
     # 經過加密的使用者密碼
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str] = mapped_column(
+        String(PASSWORD_HASH_MAX_LENGTH), nullable=False
+    )
     # 使用者圖片 (之後要考慮 Storage 的問題)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(
+        String(AVATAR_URL_MAX_LENGTH), nullable=True
+    )
     # Email 是否認證 (之後再做 Email 認證的功能)
     is_email_verified: Mapped[bool] = mapped_column(
         Boolean, default=False, nullable=False

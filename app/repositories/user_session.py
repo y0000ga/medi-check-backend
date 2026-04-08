@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import Session
 
-from app.models.user_session import UserSession
+from app.models import UserSession
 
 
 def create_user_session(
