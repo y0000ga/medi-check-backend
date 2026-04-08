@@ -1,36 +1,76 @@
+import uuid
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
 from app.db.session import get_db
 from app.dependencies.user import get_current_user
-from app.models.user import User
+from app.models import User
 from app.schemas.base import ApiResponse
 from app.schemas.patient import (
+    CreatePatientBody,
+    CreatePatientPayload,
+    CreatePatientResponse,
+    DetailPatientPayload,
+    DetailPatientResponse,
     ListPatientsPayload,
-    ListPatientsRequest,
+    ListPatientsQueryParams,
     ListPatientsResponse,
 )
-from app.services.patient import get_patients_list
+from app.services.patient import add_new_patient, get_patient_detail, get_patient_list
 
-router = APIRouter(prefix="/patient", tags=["patient"])
+router = APIRouter(prefix="/patients", tags=["patient"])
 
 
-@router.get("/list")
+# 取得對應病人列表
+@router.get("")
 def get_patients(
-    request_data: ListPatientsRequest,
+    query: ListPatientsQueryParams = Depends(),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ListPatientsResponse]:
     payload = ListPatientsPayload(
-        page=request_data.page,
-        page_size=request_data.page_size,
+        page=query.page,
+        page_size=query.page_size,
+        sort_by=query.sort_by,
+        sort_order=query.sort_order,
         user_id=user.id,
     )
-    result = get_patients_list(payload=payload, db=db)
+    result = get_patient_list(payload=payload, db=db)
     return success_response(result)
 
 
-@router.get("detail")
-def get_patient_detail():
-    return success_response(None)
+# 取得病人詳細資訊
+@router.get("/{patient_id}")
+def get_patient(
+    patient_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[DetailPatientResponse]:
+    payload = DetailPatientPayload(
+        patient_id=patient_id,
+        user_id=user.id,
+    )
+    result = get_patient_detail(payload=payload, db=db)
+    return success_response(result)
+
+
+@router.post("")
+def create_patient(
+    body: CreatePatientBody,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[CreatePatientResponse]:
+
+    payload = CreatePatientPayload(
+        email=body.email,
+        name=body.name,
+        avatar_url=body.avatar_url,
+        user_id=user.id,
+        birth_date=body.birth_date,
+    )
+
+    result = add_new_patient(db=db, payload=payload)
+
+    return success_response(result)

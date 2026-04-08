@@ -50,5 +50,9 @@ def edit_current_user(
             user.avatar_url = normalized_avatar_url
             patient.avatar_url = normalized_avatar_url
 
+        if payload.birth_date is not None:
+            user.birth_date = payload.birth_date
+            patient.birth_date = payload.birth_date
+
     db.refresh(user)
     return EditUserResponse(id=user.id)

@@ -1,10 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.api.routes import (
     auth_router,
-    user_router,
-    patient_router,
+    care_invitation_router,
     care_relationship_router,
+    history_router,
+    medication_router,
+    patient_router,
+    schedule_router,
+    user_router,
 )
 from app.core.exception_handlers import register_exception_handlers
 
@@ -34,4 +39,8 @@ def health_check():
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(patient_router)
+app.include_router(care_invitation_router)
 app.include_router(care_relationship_router)
+app.include_router(history_router)
+app.include_router(medication_router)
+app.include_router(schedule_router)

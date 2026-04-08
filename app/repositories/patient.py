@@ -1,3 +1,4 @@
+from datetime import datetime
 import uuid
 from sqlalchemy import Row, func, select
 from sqlalchemy.orm import Session
@@ -34,14 +35,39 @@ def _build_list_stmt(query: ListPatientsQuery):
     return stmt
 
 
-def create_patient_for_user(db: Session, user_id: uuid.UUID, name: str) -> Patient:
+def create_patient(
+    db: Session,
+    *,
+    linked_user_id: uuid.UUID | None = None,
+    name: str,
+    birth_date: datetime | None,
+    avatar_url: str | None,
+) -> Patient:
     patient = Patient(
-        linked_user_id=user_id,
+        linked_user_id=linked_user_id,
         name=name,
+        birth_date=birth_date,
+        avatar_url=avatar_url,
     )
     db.add(patient)
     db.flush()
     return patient
+
+
+def create_patient_for_user(
+    db: Session,
+    user_id: uuid.UUID,
+    name: str,
+    birth_date: datetime | None = None,
+    avatar_url: str | None = None,
+) -> Patient:
+    return create_patient(
+        db=db,
+        linked_user_id=user_id,
+        name=name,
+        birth_date=birth_date,
+        avatar_url=avatar_url,
+    )
 
 
 def get_patient_by_user_id(db: Session, user_id: uuid.UUID) -> Patient | None:

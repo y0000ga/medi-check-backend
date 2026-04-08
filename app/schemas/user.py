@@ -1,6 +1,8 @@
+
 import uuid
 
 from pydantic import BaseModel, EmailStr
+from datetime import datetime
 from app.core.enums.user import UserStatus
 
 
@@ -16,6 +18,7 @@ class UserResponse(BaseModel):
 class EditUserMeBody(BaseModel):
     name: str | None = None
     avatar_url: str | None = None
+    birth_date: datetime | None = None
 
 
 class EditUserResponse(BaseModel):

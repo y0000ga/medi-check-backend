@@ -26,6 +26,10 @@ class User(Base):
         default=uuid.uuid4,
     )
 
+    birth_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
     # 使用者名稱 - 最多 100 字
     name: Mapped[str] = mapped_column(String(NAME_MAX_LENGTH), nullable=False)
     # 使用者 Email

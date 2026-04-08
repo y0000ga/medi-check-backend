@@ -72,6 +72,8 @@ def validate_optional_string_field(
     if normalized_value == "":
         if empty_as_none:
             return None
+        if min_length == 0:
+            return normalized_value
         raise _field_validation_error(
             field_name=field_name,
             message=f"{field_name} cannot be empty",
