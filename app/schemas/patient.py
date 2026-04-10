@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict
 
 from app.core.enums.care_relationship import PermissionLevel
 from app.schemas.base import PaginationRequest, PaginationResponse
@@ -32,10 +32,11 @@ class DetailPatientResponse(BaseModel):
 
 class ListPatientsQuery(PaginationRequest):
     user_id: uuid.UUID
+    search: str | None = None
 
 
 class ListPatientsQueryParams(PaginationRequest):
-    pass
+    search: str | None = None
 
 
 class ListPatientsPayload(ListPatientsQuery):
@@ -46,8 +47,20 @@ class ListPatientsResponse(PaginationResponse):
     list: list[PatientResponse]
 
 
+class PatientOptionResponse(BaseModel):
+    id: uuid.UUID
+    name: str
+    avatar_url: str | None
+    permission_level: PermissionLevel
+
+
+class ListPatientOptionsResponse(BaseModel):
+    list: list[PatientOptionResponse]
+
+
 class CreatePatientBody(BaseModel):
-    email: EmailStr | None = None
+    model_config = ConfigDict(extra="forbid")
+
     name: str
     avatar_url: str | None = None
     birth_date: datetime | None = None

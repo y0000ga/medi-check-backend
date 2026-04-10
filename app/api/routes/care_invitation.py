@@ -11,9 +11,10 @@ from app.schemas.base import ApiResponse
 from app.schemas.care_invitation import (
     AcceptCareInvitationPayload,
     AcceptCareInvitationResponse,
-    CreateCareInvitationBody,
     CreateCareInvitationPayload,
     CreateCareInvitationResponse,
+    CreateCaregiverInvitationBody,
+    CreatePatientInvitationBody,
     DeclineCareInvitationPayload,
     DeclineCareInvitationResponse,
     ListCareInvitationPayload,
@@ -24,7 +25,8 @@ from app.schemas.care_invitation import (
 )
 from app.services.care_invitation import (
     accept_invitation,
-    add_care_invitation,
+    add_caregiver_invitation,
+    add_patient_invitation,
     decline_invitation,
     get_care_invitation_list,
     revoke_invitation,
@@ -53,20 +55,33 @@ def get_care_invitations(
     return success_response(response)
 
 
-@router.post("")
-def create_care_invitation(
-    body: CreateCareInvitationBody,
+@router.post("/me/caregiver")
+def create_caregiver_invitation(
+    body: CreateCaregiverInvitationBody,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[CreateCareInvitationResponse]:
     payload = CreateCareInvitationPayload(
         user_id=user.id,
-        patient_id=body.patient_id,
         invitee_email=body.invitee_email,
-        invitation_type=body.invitation_type,
         permission_level=body.permission_level,
     )
-    response = add_care_invitation(payload=payload, db=db)
+    response = add_caregiver_invitation(payload=payload, db=db)
+    return success_response(response)
+
+
+@router.post("/me/patient")
+def create_patient_invitation(
+    body: CreatePatientInvitationBody,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[CreateCareInvitationResponse]:
+    payload = CreateCareInvitationPayload(
+        user_id=user.id,
+        invitee_email=body.invitee_email,
+        permission_level=body.permission_level,
+    )
+    response = add_patient_invitation(payload=payload, db=db)
     return success_response(response)
 
 

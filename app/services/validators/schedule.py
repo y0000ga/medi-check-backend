@@ -2,7 +2,7 @@
 #     patient_id=patient_id,
 #     medication_id=medication_id,
 #     timezone=timezone,
-#     started_at=started_at,
+#     start_date=start_date,
 #     time_slots=time_slots,
 #     dose_unit=dose_unit,
 #     frequency=frequency,
@@ -14,7 +14,7 @@
 # )
 
 
-from datetime import date, datetime
+from datetime import date
 
 from app.core.enums.schedule import EndType, FrequencyUnit
 from app.core.exceptions import AppException
@@ -30,8 +30,9 @@ from app.services.errors.schedule import (
     occurrence_count_not_allowed_for_one_time_schedule_error,
     occurrence_count_not_allowed_for_until_end_error,
     occurrence_count_required_for_counts_end_error,
-    started_at_required_error,
-    until_date_before_started_at_error,
+    start_date_required_error,
+    time_slots_required_error,
+    until_date_before_start_date_error,
     until_date_not_allowed_for_counts_end_error,
     until_date_not_allowed_for_never_end_error,
     until_date_not_allowed_for_one_time_schedule_error,
@@ -79,6 +80,7 @@ def _validate_frequency_rule(
 
 def _validate_one_time_rules(
     *,
+    time_slots: list[str] | None,
     frequency_unit: FrequencyUnit | None,
     interval: int | None,
     weekdays: list[int] | None,
@@ -87,6 +89,7 @@ def _validate_one_time_rules(
 ) -> None:
     _ensure_rules(
         [
+            (time_slots is not None and len(time_slots) > 0, time_slots_required_error()),
             (
                 until_date is None,
                 until_date_not_allowed_for_one_time_schedule_error(),
@@ -110,12 +113,14 @@ def _validate_one_time_rules(
 
 def _validate_recurring_base_rules(
     *,
+    time_slots: list[str] | None,
     frequency_unit: FrequencyUnit | None,
     interval: int | None,
     weekdays: list[int] | None,
 ) -> None:
     _ensure_rules(
         [
+            (time_slots is not None and len(time_slots) > 0, time_slots_required_error()),
             (
                 frequency_unit is not None,
                 frequency_unit_required_for_recurring_schedule_error(),
@@ -168,7 +173,7 @@ def _validate_counts_end_rules(
 def _validate_until_end_rules(
     *,
     until_date: date | None,
-    started_at: datetime,
+    start_date: date,
     occurrence_count: int | None,
 ) -> None:
     _ensure_rules(
@@ -179,8 +184,8 @@ def _validate_until_end_rules(
             ),
             (until_date is not None, until_date_required_for_until_end_error()),
             (
-                until_date is not None and until_date > started_at.date(),
-                until_date_before_started_at_error(),
+                until_date is not None and until_date > start_date,
+                until_date_before_start_date_error(),
             ),
         ]
     )
@@ -188,19 +193,21 @@ def _validate_until_end_rules(
 
 def validate_create_schedule_rules(
     *,
+    time_slots: list[str] | None,
     interval: int | None,
     frequency_unit: FrequencyUnit | None,
     weekdays: list[int] | None,
     end_type: EndType | None,
     until_date: date | None,
-    started_at: datetime | None,
+    start_date: date | None,
     occurrence_count: int | None,
 ) -> None:
-    if started_at is None:
-        raise started_at_required_error()
+    if start_date is None:
+        raise start_date_required_error()
 
     if end_type is None:
         _validate_one_time_rules(
+            time_slots=time_slots,
             frequency_unit=frequency_unit,
             interval=interval,
             weekdays=weekdays,
@@ -210,6 +217,7 @@ def validate_create_schedule_rules(
         return
 
     _validate_recurring_base_rules(
+        time_slots=time_slots,
         frequency_unit=frequency_unit,
         interval=interval,
         weekdays=weekdays,
@@ -232,6 +240,6 @@ def validate_create_schedule_rules(
     if end_type == EndType.until:
         _validate_until_end_rules(
             until_date=until_date,
-            started_at=started_at,
+            start_date=start_date,
             occurrence_count=occurrence_count,
         )

@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
@@ -14,11 +14,17 @@ from app.schemas.patient import (
     CreatePatientResponse,
     DetailPatientPayload,
     DetailPatientResponse,
+    ListPatientOptionsResponse,
     ListPatientsPayload,
     ListPatientsQueryParams,
     ListPatientsResponse,
 )
-from app.services.patient import add_new_patient, get_patient_detail, get_patient_list
+from app.services.patient import (
+    add_new_patient,
+    get_patient_detail,
+    get_patient_list,
+    get_patient_options,
+)
 
 router = APIRouter(prefix="/patients", tags=["patient"])
 
@@ -35,9 +41,28 @@ def get_patients(
         page_size=query.page_size,
         sort_by=query.sort_by,
         sort_order=query.sort_order,
+        search=query.search,
         user_id=user.id,
     )
     result = get_patient_list(payload=payload, db=db)
+    return success_response(result)
+
+
+@router.get("/options")
+def get_patient_options_route(
+    search: str | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[ListPatientOptionsResponse]:
+    payload = ListPatientsPayload(
+        page=1,
+        page_size=1000,
+        sort_by="created_at",
+        sort_order="desc",
+        search=search,
+        user_id=user.id,
+    )
+    result = get_patient_options(payload=payload, db=db)
     return success_response(result)
 
 
@@ -64,7 +89,6 @@ def create_patient(
 ) -> ApiResponse[CreatePatientResponse]:
 
     payload = CreatePatientPayload(
-        email=body.email,
         name=body.name,
         avatar_url=body.avatar_url,
         user_id=user.id,

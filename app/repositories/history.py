@@ -1,11 +1,12 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import Row, func, select
 from sqlalchemy.orm import Session
 
 from app.core.enums.care_relationship import RelationshipStatus
-from app.models import CareRelationship, History
+from app.core.enums.medication import DosageForm
+from app.models import CareRelationship, History, Medication, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.history import ListHistoriesQuery
 
@@ -22,7 +23,9 @@ def _get_order_column(query: ListHistoriesQuery):
 
 def _build_history_list_stmt(*, query: ListHistoriesQuery):
     stmt = (
-        select(History)
+        select(History, Medication.name, Medication.dosage_form, Patient.name)
+        .join(Medication, Medication.id == History.medication_id, isouter=True)
+        .join(Patient, Patient.id == History.patient_id)
         .join(CareRelationship, CareRelationship.patient_id == History.patient_id)
         .where(
             CareRelationship.caregiver_user_id == query.user_id,
@@ -80,11 +83,30 @@ def get_history_by_schedule_occurrence(
     return db.scalar(stmt)
 
 
+def list_histories_by_schedule_ids_and_date_range(
+    *,
+    db: Session,
+    schedule_ids: list[uuid.UUID],
+    from_date: date,
+    to_date: date,
+) -> list[History]:
+    if not schedule_ids:
+        return []
+
+    stmt = select(History).where(
+        History.schedule_id.in_(schedule_ids),
+        func.date(History.scheduled_at_snapshot) >= from_date,
+        func.date(History.scheduled_at_snapshot) <= to_date,
+    )
+    result = db.execute(stmt)
+    return list(result.scalars().all())
+
+
 def list_histories(
     *,
     db: Session,
     query: ListHistoriesQuery,
-) -> list[History]:
+) -> list[Row[tuple[History, str | None, DosageForm | None, str]]]:
     stmt = _build_history_list_stmt(query=query)
     order_column = _get_order_column(query)
     stmt = apply_sort_order(
@@ -94,7 +116,7 @@ def list_histories(
     )
     stmt = apply_pagination(stmt=stmt, page=query.page, page_size=query.page_size)
     result = db.execute(stmt)
-    return list(result.scalars().all())
+    return list(result.all())
 
 
 def count_histories(

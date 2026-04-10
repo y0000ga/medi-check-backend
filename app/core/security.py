@@ -1,10 +1,10 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-from fastapi import Request
-from passlib.context import CryptContext
-from jose import JWTError, ExpiredSignatureError, jwt
-
 from typing import Any
+
+from fastapi.security import HTTPBearer
+from jose import JWTError, ExpiredSignatureError, jwt
+from passlib.context import CryptContext
 
 from app.services.errors.auth import (
     expired_refresh_token_error,
@@ -27,6 +27,12 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 ACCESS_SECRET_KEY = "your-secret-key"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+
+bearer_scheme = HTTPBearer(
+    auto_error=False,
+    scheme_name="BearerAuth",
+    description="Paste access token here using the Bearer scheme.",
+)
 
 
 # 註冊時使用
@@ -120,15 +126,3 @@ def parse_access_token_user_id(token: str) -> uuid.UUID:
     except ValueError:
         raise invalid_access_token_error()
 
-def get_bearer_token_from_header(request: Request) -> str:
-    authorization = request.headers.get("Authorization")
-
-    if not authorization:
-        raise invalid_access_token_error()
-
-    scheme, _, token = authorization.partition(" ")
-
-    if scheme.lower() != "bearer" or not token:
-        raise invalid_access_token_error()
-
-    return token

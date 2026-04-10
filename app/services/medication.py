@@ -37,10 +37,12 @@ from app.services.validators.patient import validate_patient_access
 def get_medication_list(
     payload: ListMedicationPayload, db: Session
 ) -> ListMedicationResponse:
-    access = validate_patient_access(
-        db=db, user_id=payload.user_id, patient_id=payload.patient_id
-    )
-    ensure_can_read(permission_level=access.permission_level)
+    if payload.patient_ids:
+        for patient_id in payload.patient_ids:
+            access = validate_patient_access(
+                db=db, user_id=payload.user_id, patient_id=patient_id
+            )
+            ensure_can_read(permission_level=access.permission_level)
 
     rows = list_medications(query=payload, db=db)
     total_size = count_medications(query=payload, db=db)
@@ -50,9 +52,10 @@ def get_medication_list(
             id=medication.id,
             dosage_form=medication.dosage_form,
             patient_id=medication.patient_id,
+            patient_name=patient_name,
             name=medication.name,
         )
-        for medication in rows
+        for medication, patient_name in rows
     ]
 
     return ListMedicationResponse(page=payload.page, total_size=total_size, list=items)
@@ -64,12 +67,16 @@ def get_medication_detail(
     access = validate_medication_access(
         db=db, user_id=payload.user_id, medication_id=payload.medication_id
     )
+    patient_access = validate_patient_access(
+        db=db, user_id=payload.user_id, patient_id=access.medication.patient_id
+    )
     ensure_can_read(permission_level=access.permission_level)
 
     return MedicationDetailResponse(
         id=access.medication.id,
         dosage_form=access.medication.dosage_form,
         patient_id=access.medication.patient_id,
+        patient_name=patient_access.patient.name,
         name=access.medication.name,
         note=access.medication.note,
         permission_level=access.permission_level,

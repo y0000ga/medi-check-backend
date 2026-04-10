@@ -2,24 +2,38 @@ import uuid
 
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, func, select
+from sqlalchemy.sql import Select
 
 from app.core.enums.care_relationship import PermissionLevel, RelationshipStatus
-from app.models import CareRelationship
+from app.models import CareRelationship, Patient, User
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.care_relationship import (
+    CareRelationshipDirection,
     DetailCareRelationshipQuery,
     ListCareRelationshipQuery,
 )
 
 
-def _build_list_stmt(query: ListCareRelationshipQuery):
-    stmt = select(CareRelationship).where(
-        CareRelationship.caregiver_user_id == query.user_id,
+def _build_list_stmt(query: ListCareRelationshipQuery) -> Select:
+    stmt = (
+        select(CareRelationship, User.name, Patient.name)
+        .join(User, User.id == CareRelationship.caregiver_user_id)
+        .join(Patient, Patient.id == CareRelationship.patient_id)
+        .where(
         and_(
             CareRelationship.revoked_at.is_(None),
             CareRelationship.status.is_not(RelationshipStatus.REVOKED),
         ),
+        )
     )
+
+    if query.direction == CareRelationshipDirection.CAREGIVER:
+        if query.self_patient_id is None:
+            stmt = stmt.where(False)
+        else:
+            stmt = stmt.where(CareRelationship.patient_id == query.self_patient_id)
+    else:
+        stmt = stmt.where(CareRelationship.caregiver_user_id == query.user_id)
 
     if query.permission_level is not None:
         stmt = stmt.where(CareRelationship.permission_level == query.permission_level)
@@ -38,7 +52,7 @@ def _get_order_column(query: ListCareRelationshipQuery):
 def list_care_relationships(
     db: Session,
     query: ListCareRelationshipQuery,
-) -> list[CareRelationship]:
+) -> list[tuple[CareRelationship, str, str]]:
 
     stmt = _build_list_stmt(query)
     order_column = _get_order_column(query)
@@ -51,7 +65,7 @@ def list_care_relationships(
 
     result = db.execute(stmt)
 
-    return list(result.scalars().all())
+    return [(row[0], row[1], row[2]) for row in result.all()]
 
 
 def count_care_relationships(

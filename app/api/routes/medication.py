@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
@@ -9,8 +9,8 @@ from app.dependencies.user import get_current_user
 from app.models import User
 from app.schemas.base import ApiResponse
 from app.schemas.medication import (
-    CreateMedicationPayload,
     CreateMedicationBody,
+    CreateMedicationPayload,
     CreateMedicationResponse,
     DeleteMedicationPayload,
     DetailMedicationPayload,
@@ -30,11 +30,30 @@ from app.services.medication import (
     update_medication,
 )
 
-
 router = APIRouter(tags=["medication"])
 
 
-# 取得藥物列表
+@router.get("/medications")
+def get_all_medications(
+    query: ListMedicationQueryParams = Depends(),
+    patient_ids: list[uuid.UUID] | None = Query(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ApiResponse[ListMedicationResponse]:
+    payload = ListMedicationPayload(
+        user_id=user.id,
+        dosage_form=query.dosage_form,
+        patient_ids=patient_ids,
+        search=query.search,
+        page=query.page,
+        page_size=query.page_size,
+        sort_by=query.sort_by,
+        sort_order=query.sort_order,
+    )
+    response = get_medication_list(db=db, payload=payload)
+    return success_response(response)
+
+
 @router.get("/patients/{patient_id}/medications")
 def get_medications(
     patient_id: uuid.UUID,
@@ -42,40 +61,34 @@ def get_medications(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ListMedicationResponse]:
-
     payload = ListMedicationPayload(
         user_id=user.id,
         dosage_form=query.dosage_form,
-        patient_id=patient_id,
-        name=query.name,
+        patient_ids=[patient_id],
+        search=query.search,
         page=query.page,
         page_size=query.page_size,
         sort_by=query.sort_by,
         sort_order=query.sort_order,
     )
-
     response = get_medication_list(db=db, payload=payload)
     return success_response(response)
 
 
-# 取得個別藥物資訊
 @router.get("/medications/{medication_id}")
 def get_medication(
     medication_id: uuid.UUID,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[MedicationDetailResponse]:
-
     payload = DetailMedicationPayload(
         user_id=user.id,
         medication_id=medication_id,
     )
-
     response = get_medication_detail(payload=payload, db=db)
     return success_response(response)
 
 
-# 新增藥物
 @router.post("/patients/{patient_id}/medications")
 def create_medication(
     patient_id: uuid.UUID,
@@ -90,9 +103,7 @@ def create_medication(
         name=body.name,
         note=body.note,
     )
-
     response = add_medication(payload=payload, db=db)
-
     return success_response(response)
 
 
@@ -112,7 +123,6 @@ def edit_medication(
     return success_response(response)
 
 
-# 刪除特定藥品
 @router.delete("/medications/{medication_id}")
 def remove_medication(
     medication_id: uuid.UUID,

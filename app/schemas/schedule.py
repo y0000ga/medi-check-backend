@@ -3,14 +3,16 @@ from datetime import date, datetime
 
 from pydantic import BaseModel
 
+from app.core.enums.history import HistoryStatus
+from app.core.enums.medication import DosageForm
 from app.core.enums.schedule import DosageUnit, EndType, FrequencyUnit
 from app.schemas.base import PaginationRequest, PaginationResponse
 
 
 class CreateScheduleBody(BaseModel):
     timezone: str
-    started_at: datetime
-    time_slots: list[str] | None = None
+    start_date: date
+    time_slots: list[str]
     amount: int
     dose_unit: DosageUnit | None = None
     frequency_unit: FrequencyUnit | None = None
@@ -24,10 +26,13 @@ class CreateScheduleBody(BaseModel):
 class ScheduleDetailResponse(BaseModel):
     id: uuid.UUID
     patient_id: uuid.UUID
+    patient_name: str
     medication_id: uuid.UUID
+    medication_name: str
+    medication_dosage_form: DosageForm
     timezone: str
-    started_at: datetime
-    time_slots: list[str] | None
+    start_date: date
+    time_slots: list[str]
     amount: int
     dose_unit: DosageUnit | None
     frequency_unit: FrequencyUnit | None
@@ -49,7 +54,7 @@ class ListSchedulesQuery(PaginationRequest):
 
 
 class ListSchedulesQueryParams(PaginationRequest):
-    patient_ids: list[uuid.UUID] | None = None
+    pass
 
 
 class ListSchedulesPayload(ListSchedulesQuery):
@@ -69,17 +74,36 @@ class ListScheduleMatchesQuery(BaseModel):
 class ListScheduleMatchesQueryParams(BaseModel):
     from_date: date
     to_date: date
-    patient_ids: list[uuid.UUID] | None = None
 
 
 class ListScheduleMatchesPayload(ListScheduleMatchesQuery):
     user_id: uuid.UUID
 
 
+class ScheduleEventHistoryResponse(BaseModel):
+    id: uuid.UUID
+    status: HistoryStatus
+    intake_at: datetime | None
+
+
+
+class ScheduleEventResponse(BaseModel):
+    schedule_id: uuid.UUID
+    patient_id: uuid.UUID
+    patient_name: str
+    medication_id: uuid.UUID
+    medication_name: str
+    medication_dosage_form: DosageForm
+    scheduled_at: datetime
+    amount: int
+    dose_unit: DosageUnit | None
+    history: ScheduleEventHistoryResponse | None
+
+
 class ListScheduleMatchesResponse(BaseModel):
     from_date: date
     to_date: date
-    list: list[ScheduleDetailResponse]
+    list: list[ScheduleEventResponse]
 
 
 class CreateSchedulePayload(CreateScheduleBody):
@@ -93,7 +117,7 @@ class CreateScheduleResponse(BaseModel):
 
 class EditScheduleBody(BaseModel):
     timezone: str | None = None
-    started_at: datetime | None = None
+    start_date: date | None = None
     time_slots: list[str] | None = None
     amount: int | None = None
     dose_unit: DosageUnit | None = None

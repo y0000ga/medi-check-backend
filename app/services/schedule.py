@@ -1,10 +1,13 @@
 import uuid
 from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
 from app.core.enums.schedule import EndType, FrequencyUnit
-from app.models import Schedule
+from app.models import History, Schedule
+from app.models.medication import Medication
+from app.repositories.history import list_histories_by_schedule_ids_and_date_range
 from app.repositories.schedule import (
     count_schedules,
     create_schedule,
@@ -25,6 +28,8 @@ from app.schemas.schedule import (
     ListSchedulesPayload,
     ListSchedulesResponse,
     ScheduleDetailResponse,
+    ScheduleEventHistoryResponse,
+    ScheduleEventResponse,
 )
 from app.services.errors.schedule import (
     invalid_schedule_event_date_range_error,
@@ -76,7 +81,7 @@ def _matches_frequency(
     if schedule.frequency_unit is None:
         return False
 
-    start_date = schedule.started_at.date()
+    start_date = schedule.start_date
     interval = schedule.interval or 1
     if target_date < start_date:
         return False
@@ -112,14 +117,11 @@ def _build_schedule_event_datetimes(
     schedule: Schedule,
     event_date: date,
 ) -> list[datetime]:
-    event_times = [schedule.started_at.timetz()]
-    if schedule.time_slots:
-        event_times = [time.fromisoformat(slot) for slot in schedule.time_slots]
+    event_times = [time.fromisoformat(slot) for slot in schedule.time_slots]
+    timezone = ZoneInfo(schedule.timezone)
 
     return [
-        datetime.combine(event_date, event_time).replace(
-            tzinfo=event_time.tzinfo or schedule.started_at.tzinfo
-        )
+        datetime.combine(event_date, event_time, tzinfo=timezone)
         for event_time in event_times
     ]
 
@@ -131,7 +133,7 @@ def _count_events_before(
 ) -> int:
     event_count = 0
     for event_date in _iter_dates(
-        from_date=schedule.started_at.date(),
+        from_date=schedule.start_date,
         to_date=target_datetime.date(),
     ):
         if not _matches_frequency(schedule=schedule, target_date=event_date):
@@ -152,7 +154,7 @@ def _schedule_occurs_on_date(
     schedule: Schedule,
     target_date: date,
 ) -> bool:
-    start_date = schedule.started_at.date()
+    start_date = schedule.start_date
     if schedule.end_type is None:
         return target_date == start_date
 
@@ -264,13 +266,21 @@ def list_schedule_occurrences_in_range(
     return occurrences
 
 
-def _build_schedule_detail_response(schedule: Schedule) -> ScheduleDetailResponse:
+def _build_schedule_detail_response_with_names(
+    *,
+    schedule: Schedule,
+    medication: Medication,
+    patient_name: str,
+) -> ScheduleDetailResponse:
     return ScheduleDetailResponse(
+        medication_dosage_form=medication.dosage_form,
         id=schedule.id,
         patient_id=schedule.patient_id,
+        patient_name=patient_name,
         medication_id=schedule.medication_id,
+        medication_name=medication.name,
         timezone=schedule.timezone,
-        started_at=schedule.started_at,
+        start_date=schedule.start_date,
         time_slots=schedule.time_slots,
         amount=schedule.amount,
         dose_unit=schedule.dose_unit,
@@ -280,6 +290,36 @@ def _build_schedule_detail_response(schedule: Schedule) -> ScheduleDetailRespons
         end_type=schedule.end_type,
         until_date=schedule.until_date,
         occurrence_count=schedule.occurrence_count,
+    )
+
+
+def _build_schedule_event_response(
+    *,
+    schedule: Schedule,
+    medication: Medication,
+    patient_name: str,
+    scheduled_at: datetime,
+    history: History | None,
+) -> ScheduleEventResponse:
+    return ScheduleEventResponse(
+        schedule_id=schedule.id,
+        patient_id=schedule.patient_id,
+        patient_name=patient_name,
+        medication_id=schedule.medication_id,
+        medication_name=medication.name,
+        medication_dosage_form=medication.dosage_form,
+        scheduled_at=scheduled_at,
+        amount=schedule.amount,
+        dose_unit=schedule.dose_unit,
+        history=(
+            ScheduleEventHistoryResponse(
+                id=history.id,
+                status=history.status,
+                intake_at=history.intake_at,
+            )
+            if history is not None
+            else None
+        ),
     )
 
 
@@ -318,7 +358,14 @@ def get_schedule_list(
     return ListSchedulesResponse(
         page=payload.page,
         total_size=total_size,
-        list=[_build_schedule_detail_response(schedule) for schedule in rows],
+        list=[
+            _build_schedule_detail_response_with_names(
+                schedule=schedule,
+                medication=medication,
+                patient_name=patient_name,
+            )
+            for schedule, medication, patient_name in rows
+        ],
     )
 
 
@@ -340,8 +387,8 @@ def get_schedule_match_list(
 
     schedules = list_schedule_match_candidates(db=db, query=payload)
     matched_schedules = [
-        schedule
-        for schedule in schedules
+        (schedule, medication, patient_name)
+        for schedule, medication, patient_name in schedules
         if _schedule_has_occurrence_in_range(
             schedule=schedule,
             from_date=payload.from_date,
@@ -349,13 +396,45 @@ def get_schedule_match_list(
         )
     ]
 
+    from_datetime = datetime.combine(payload.from_date, time.min)
+    to_datetime = datetime.combine(payload.to_date, time.max)
+    schedule_ids = [schedule.id for schedule, _, _ in matched_schedules]
+    histories = list_histories_by_schedule_ids_and_date_range(
+        db=db,
+        schedule_ids=schedule_ids,
+        from_date=payload.from_date,
+        to_date=payload.to_date,
+    )
+    history_map = {
+        (history.schedule_id, history.scheduled_at_snapshot): history
+        for history in histories
+        if history.schedule_id is not None
+    }
+
+    events: list[ScheduleEventResponse] = []
+    for schedule, medication, patient_name in matched_schedules:
+        occurrences = list_schedule_occurrences_in_range(
+            schedule=schedule,
+            from_datetime=from_datetime.replace(tzinfo=ZoneInfo(schedule.timezone)),
+            to_datetime=to_datetime.replace(tzinfo=ZoneInfo(schedule.timezone)),
+        )
+        for scheduled_at in occurrences:
+            events.append(
+                _build_schedule_event_response(
+                    schedule=schedule,
+                    medication=medication,
+                    patient_name=patient_name,
+                    scheduled_at=scheduled_at,
+                    history=history_map.get((schedule.id, scheduled_at)),
+                )
+            )
+
+    events.sort(key=lambda event: event.scheduled_at)
+
     return ListScheduleMatchesResponse(
         from_date=payload.from_date,
         to_date=payload.to_date,
-        list=[
-            _build_schedule_detail_response(schedule)
-            for schedule in matched_schedules
-        ],
+        list=events,
     )
 
 
@@ -365,12 +444,13 @@ def add_schedule(
     payload: CreateSchedulePayload,
 ) -> CreateScheduleResponse:
     validate_create_schedule_rules(
+        time_slots=payload.time_slots,
         interval=payload.interval,
         frequency_unit=payload.frequency_unit,
         weekdays=payload.weekdays,
         end_type=payload.end_type,
         until_date=payload.until_date,
-        started_at=payload.started_at,
+        start_date=payload.start_date,
         occurrence_count=payload.occurrence_count,
     )
 
@@ -388,7 +468,7 @@ def add_schedule(
                 patient_id=access.medication.patient_id,
                 medication_id=access.medication.id,
                 timezone=payload.timezone,
-                started_at=payload.started_at,
+                start_date=payload.start_date,
                 time_slots=payload.time_slots,
                 amount=payload.amount,
                 dose_unit=payload.dose_unit,
@@ -421,7 +501,17 @@ def get_schedule_detail(
     )
     ensure_can_read(permission_level=access.permission_level)
 
-    return _build_schedule_detail_response(schedule)
+    patient_access = validate_patient_access(
+        db=db,
+        user_id=payload.user_id,
+        patient_id=schedule.patient_id,
+    )
+
+    return _build_schedule_detail_response_with_names(
+        schedule=schedule,
+        medication=access.medication,
+        patient_name=patient_access.patient.name,
+    )
 
 
 def update_schedule(
@@ -443,8 +533,8 @@ def update_schedule(
 
         fields = payload.model_fields_set - {"user_id", "schedule_id"}
         # 要檢視彼此 validation 的時候就要這樣做 (next_*)
-        next_started_at = (
-            payload.started_at if "started_at" in fields else schedule.started_at
+        next_start_date = (
+            payload.start_date if "start_date" in fields else schedule.start_date
         )
         next_frequency_unit = (
             payload.frequency_unit
@@ -464,12 +554,13 @@ def update_schedule(
         )
 
         validate_create_schedule_rules(
+            time_slots=payload.time_slots if "time_slots" in fields else schedule.time_slots,
             interval=next_interval,
             frequency_unit=next_frequency_unit,
             weekdays=next_weekdays,
             end_type=next_end_type,
             until_date=next_until_date,
-            started_at=next_started_at,
+            start_date=next_start_date,
             occurrence_count=next_occurrence_count,
         )
 

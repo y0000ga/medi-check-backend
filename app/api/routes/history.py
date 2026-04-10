@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
@@ -34,6 +34,7 @@ router = APIRouter(tags=["history"])
 @router.get("/histories")
 def get_histories(
     query: ListHistoriesQueryParams = Depends(),
+    patient_ids: list[uuid.UUID] | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ListHistoriesResponse]:
@@ -43,7 +44,7 @@ def get_histories(
         sort_by=query.sort_by,
         sort_order=query.sort_order,
         user_id=user.id,
-        patient_ids=query.patient_ids,
+        patient_ids=patient_ids,
         medication_id=query.medication_id,
         status=query.status,
         from_date=query.from_date,

@@ -30,6 +30,7 @@ def get_care_relationships(
         sort_order=query.sort_order,
         user_id=user.id,
         permission_level=query.permission_level,
+        direction=query.direction,
     )
     response = get_care_relationship_list(payload=payload, db=db)
     return success_response(response)

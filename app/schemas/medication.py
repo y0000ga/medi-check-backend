@@ -11,6 +11,7 @@ class MedicationResponse(BaseModel):
     id: uuid.UUID
     dosage_form: DosageForm
     patient_id: uuid.UUID
+    patient_name: str
     name: str
 
 
@@ -22,13 +23,13 @@ class MedicationDetailResponse(MedicationResponse):
 class ListMedicationQuery(PaginationRequest):
     user_id: uuid.UUID
     dosage_form: DosageForm | None
-    patient_id: uuid.UUID
-    name: str | None
+    patient_ids: list[uuid.UUID] | None = None
+    search: str | None
 
 
 class ListMedicationQueryParams(PaginationRequest):
     dosage_form: DosageForm | None = None
-    name: str | None = None
+    search: str | None = None
 
 
 class ListMedicationPayload(ListMedicationQuery):

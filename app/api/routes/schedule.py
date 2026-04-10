@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
@@ -41,6 +41,7 @@ router = APIRouter(tags=["schedule"])
 @router.get("/schedules")
 def get_schedules(
     query: ListSchedulesQueryParams = Depends(),
+    patient_ids: list[uuid.UUID] | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ListSchedulesResponse]:
@@ -50,7 +51,7 @@ def get_schedules(
         sort_by=query.sort_by,
         sort_order=query.sort_order,
         user_id=user.id,
-        patient_ids=query.patient_ids,
+        patient_ids=patient_ids,
     )
     response = get_schedule_list(db=db, payload=payload)
     return success_response(response)
@@ -60,12 +61,13 @@ def get_schedules(
 @router.get("/schedule-matches")
 def get_schedule_matches(
     query: ListScheduleMatchesQueryParams = Depends(),
+    patient_ids: list[uuid.UUID] | None = Query(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ListScheduleMatchesResponse]:
     payload = ListScheduleMatchesPayload(
         user_id=user.id,
-        patient_ids=query.patient_ids,
+        patient_ids=patient_ids,
         from_date=query.from_date,
         to_date=query.to_date,
     )

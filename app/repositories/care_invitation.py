@@ -1,12 +1,13 @@
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import aliased
 
 from app.core.enums.care_invitaion import InvitationStatus, InvitationType
 from app.core.enums.care_relationship import PermissionLevel
-from app.models import CareInvitation
+from app.models import CareInvitation, Patient, User
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.repositories.user import get_user_by_email
 from app.schemas.care_invitation import ListCareInvitationQuery
@@ -23,11 +24,17 @@ def _get_order_column(query: ListCareInvitationQuery):
 
 
 def _build_list_stmt(*, query: ListCareInvitationQuery):
-    stmt = select(CareInvitation).where(
-        or_(
-            CareInvitation.inviter_user_id == query.user_id,
-            CareInvitation.invitee_user_id == query.user_id,
-            CareInvitation.invitee_email == query.user_email,
+    invitee_user = aliased(User)
+    stmt = (
+        select(CareInvitation, User.name, invitee_user.name)
+        .join(User, User.id == CareInvitation.inviter_user_id)
+        .outerjoin(invitee_user, invitee_user.id == CareInvitation.invitee_user_id)
+        .where(
+            or_(
+                CareInvitation.inviter_user_id == query.user_id,
+                CareInvitation.invitee_user_id == query.user_id,
+                CareInvitation.invitee_email == query.user_email,
+            )
         )
     )
 
@@ -53,7 +60,7 @@ def list_care_invitations(
     *,
     db: Session,
     query: ListCareInvitationQuery,
-) -> list[CareInvitation]:
+) -> list[tuple[CareInvitation, str, str | None]]:
     stmt = _build_list_stmt(query=query)
     order_column = _get_order_column(query)
     stmt = apply_sort_order(
@@ -63,7 +70,7 @@ def list_care_invitations(
     )
     stmt = apply_pagination(stmt=stmt, page=query.page, page_size=query.page_size)
     result = db.execute(stmt)
-    return list(result.scalars().all())
+    return [(row[0], row[1], row[2]) for row in result.all()]
 
 
 def count_care_invitations(
@@ -102,6 +109,40 @@ def get_pending_care_invitation(
         stmt = stmt.where(CareInvitation.patient_id.is_(None))
     else:
         stmt = stmt.where(CareInvitation.patient_id == patient_id)
+    return db.scalar(stmt)
+
+
+def get_pending_care_invitation_for_relationship(
+    *,
+    db: Session,
+    caregiver_user_id: uuid.UUID,
+    patient_id: uuid.UUID,
+) -> CareInvitation | None:
+    stmt = (
+        select(CareInvitation)
+        .outerjoin(
+            Patient,
+            and_(
+                CareInvitation.invitation_type == InvitationType.INVITE_PATIENT,
+                Patient.linked_user_id == CareInvitation.invitee_user_id,
+            ),
+        )
+        .where(CareInvitation.status == InvitationStatus.PENDING)
+        .where(
+            or_(
+                and_(
+                    CareInvitation.invitation_type == InvitationType.INVITE_PATIENT,
+                    CareInvitation.inviter_user_id == caregiver_user_id,
+                    Patient.id == patient_id,
+                ),
+                and_(
+                    CareInvitation.invitation_type == InvitationType.INVITE_CAREGIVER,
+                    CareInvitation.invitee_user_id == caregiver_user_id,
+                    CareInvitation.patient_id == patient_id,
+                ),
+            )
+        )
+    )
     return db.scalar(stmt)
 
 

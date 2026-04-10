@@ -5,6 +5,7 @@ from typing import Literal
 from sqlalchemy.orm import Session
 
 from app.core.enums.history import HistorySource, HistoryStatus
+from app.core.enums.medication import DosageForm
 from app.core.validation_rules import (
     MEDICATION_NOTE_MAX_LENGTH,
     MEDICATION_NOTE_MIN_LENGTH,
@@ -23,11 +24,13 @@ from app.schemas.history import (
     EditHistoryPayload,
     EditHistoryResponse,
     HistoryDetailResponse,
+    HistoryResponse,
     ListHistoriesPayload,
     ListHistoriesResponse,
     QuickCheckHistoryPayload,
     QuickCheckHistoryResponse,
 )
+from app.services.access import MedicationAccess
 from app.services.errors.history import (
     history_access_denied_error,
     invalid_history_feeling_error,
@@ -57,12 +60,23 @@ def _get_history_status_and_source(
     return HistoryStatus.missed, HistorySource.system
 
 
-def _build_history_detail_response(history: History) -> HistoryDetailResponse:
-    return HistoryDetailResponse(
+def _build_history_response(
+    *,
+    history: History,
+    patient_name: str,
+    medication_name: str | None,
+    medication_dosage_form: DosageForm | None,
+) -> HistoryResponse:
+    return HistoryResponse(
         id=history.id,
         patient_id=history.patient_id,
+        patient_name=patient_name,
         schedule_id=history.schedule_id,
         medication_id=history.medication_id,
+        medication_name=medication_name or history.medication_name_snapshot,
+        medication_dosage_form=(
+            medication_dosage_form or history.medication_dosage_form_snapshot
+        ),
         scheduled_at=history.scheduled_at_snapshot,
         intake_at=history.intake_at,
         status=history.status,
@@ -71,14 +85,7 @@ def _build_history_detail_response(history: History) -> HistoryDetailResponse:
         dose_unit_snapshot=history.dose_unit_snapshot,
         taken_amount=history.taken_amount,
         medication_name_snapshot=history.medication_name_snapshot,
-        memo=history.memo,
-        feeling=history.feeling,
-        medication_dosage_form_snapshot=history.medication_dosage_form_snapshot,
     )
-
-
-def _build_history_response(history: History) -> HistoryDetailResponse:
-    return _build_history_detail_response(history)
 
 
 def _ensure_can_read_history_filters(
@@ -124,7 +131,15 @@ def get_history_list(
     return ListHistoriesResponse(
         page=payload.page,
         total_size=total_size,
-        list=[_build_history_response(history) for history in rows],
+        list=[
+            _build_history_response(
+                history=history,
+                medication_name=medication_name,
+                medication_dosage_form=medication_dosage_form,
+                patient_name=patient_name,
+            )
+            for history, medication_name, medication_dosage_form, patient_name in rows
+        ],
     )
 
 
@@ -137,22 +152,56 @@ def get_history_detail(
     if history is None:
         raise history_access_denied_error()
 
+    medication_access: MedicationAccess | None = None
     if history.medication_id is not None:
-        access = validate_medication_access(
+        medication_access = validate_medication_access(
             db=db,
             user_id=payload.user_id,
             medication_id=history.medication_id,
         )
-        ensure_can_read(permission_level=access.permission_level)
+        ensure_can_read(permission_level=medication_access.permission_level)
     else:
-        access = validate_patient_access(
+        patient_only_access = validate_patient_access(
             db=db,
             user_id=payload.user_id,
             patient_id=history.patient_id,
         )
-        ensure_can_read(permission_level=access.permission_level)
+        ensure_can_read(permission_level=patient_only_access.permission_level)
 
-    return _build_history_detail_response(history)
+    patient_access = validate_patient_access(
+        db=db,
+        user_id=payload.user_id,
+        patient_id=history.patient_id,
+    )
+
+    return HistoryDetailResponse(
+        id=history.id,
+        patient_id=history.patient_id,
+        patient_name=patient_access.patient.name,
+        schedule_id=history.schedule_id,
+        medication_id=history.medication_id,
+        medication_name=(
+            medication_access.medication.name
+            if medication_access is not None
+            else history.medication_name_snapshot
+        ),
+        medication_dosage_form=(
+            medication_access.medication.dosage_form
+            if medication_access is not None
+            else history.medication_dosage_form_snapshot
+        ),
+        scheduled_at=history.scheduled_at_snapshot,
+        intake_at=history.intake_at,
+        status=history.status,
+        source=history.source,
+        amount_snapshot=history.amount_snapshot,
+        dose_unit_snapshot=history.dose_unit_snapshot,
+        taken_amount=history.taken_amount,
+        medication_name_snapshot=history.medication_name_snapshot,
+        memo=history.memo,
+        feeling=history.feeling,
+        medication_dosage_form_snapshot=history.medication_dosage_form_snapshot,
+    )
 
 
 def add_quick_check_history(
@@ -207,6 +256,8 @@ def add_quick_check_history(
 
     db.refresh(history)
     return QuickCheckHistoryResponse(id=history.id)
+
+
 def update_history(
     *,
     db: Session,

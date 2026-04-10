@@ -1,13 +1,14 @@
 import uuid
 
+from sqlalchemy import Row, delete, func, or_, select
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, func, select
+from app.core.enums.care_relationship import RelationshipStatus
 from app.core.enums.medication import DosageForm
 from app.core.validation_rules import (
     MEDICATION_NAME_MAX_LENGTH,
     MEDICATION_NAME_MIN_LENGTH,
 )
-from app.models import Medication
+from app.models import CareRelationship, Medication, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.medication import ListMedicationQuery
 from app.core.validators import validate_optional_string_field
@@ -26,29 +27,46 @@ def _get_order_column(query: ListMedicationQuery):
 
 
 def _build_list_stmt(query: ListMedicationQuery):
-    stmt = select(Medication).where(
-        Medication.patient_id == query.patient_id,
+    stmt = (
+        select(Medication, Patient.name)
+        .join(Patient, Patient.id == Medication.patient_id)
+        .join(CareRelationship, CareRelationship.patient_id == Medication.patient_id)
+        .where(
+            CareRelationship.caregiver_user_id == query.user_id,
+            CareRelationship.revoked_at.is_(None),
+            CareRelationship.status.is_not(RelationshipStatus.REVOKED),
+        )
     )
+
+    if query.patient_ids:
+        stmt = stmt.where(Medication.patient_id.in_(query.patient_ids))
 
     if query.dosage_form is not None:
         stmt = stmt.where(Medication.dosage_form == query.dosage_form)
 
-    normalized_name = validate_optional_string_field(
-        field_name="name",
-        value=query.name,
+    normalized_search = validate_optional_string_field(
+        field_name="search",
+        value=query.search,
         max_length=MEDICATION_NAME_MAX_LENGTH,
         min_length=MEDICATION_NAME_MIN_LENGTH,
         trim=True,
         empty_as_none=True,
     )
 
-    if normalized_name is not None:
-        stmt = stmt.where(Medication.name.ilike(f"%{normalized_name}%"))
+    if normalized_search is not None:
+        stmt = stmt.where(
+            or_(
+                Medication.name.ilike(f"%{normalized_search}%"),
+                Patient.name.ilike(f"%{normalized_search}%"),
+            )
+        )
 
     return stmt
 
 
-def list_medications(db: Session, query: ListMedicationQuery) -> list[Medication]:
+def list_medications(
+    db: Session, query: ListMedicationQuery
+) -> list[Row[tuple[Medication, str]]]:
     stmt = _build_list_stmt(query=query)
     order_column = _get_order_column(query)
     stmt = apply_pagination(stmt=stmt, page=query.page, page_size=query.page_size)
@@ -57,7 +75,7 @@ def list_medications(db: Session, query: ListMedicationQuery) -> list[Medication
     )
 
     result = db.execute(stmt)
-    return list(result.scalars().all())
+    return list(result.all())
 
 
 def count_medications(db: Session, query: ListMedicationQuery) -> int:

@@ -11,6 +11,7 @@ from app.repositories.care_invitation import (
     decline_care_invitation,
     get_care_invitation_by_id,
     get_pending_care_invitation,
+    get_pending_care_invitation_for_relationship,
     list_care_invitations,
     revoke_care_invitation,
 )
@@ -44,22 +45,25 @@ from app.services.errors.care_invitation import (
     invite_patient_patient_id_not_allowed_error,
     invitee_patient_not_found_error,
     invitee_user_not_found_error,
+    inviter_patient_not_found_error,
     pending_care_invitation_already_exists_error,
 )
-from app.services.permissions import ensure_can_admin
 from app.services.transactions import db_transaction
-from app.services.validators.patient import validate_patient_access
 
 
 def _build_care_invitation_response(
     invitation: CareInvitation,
+    inviter_name: str,
+    invitee_name: str | None,
 ) -> CareInvitationResponse:
     return CareInvitationResponse(
         id=invitation.id,
         inviter_user_id=invitation.inviter_user_id,
+        inviter_name=inviter_name,
         patient_id=invitation.patient_id,
         invitee_email=invitation.invitee_email,
         invitee_user_id=invitation.invitee_user_id,
+        invitee_name=invitee_name,
         invitation_type=invitation.invitation_type,
         permission_level=invitation.permission_level,
         status=invitation.status,
@@ -81,7 +85,10 @@ def get_care_invitation_list(
     return ListCareInvitationResponse(
         page=payload.page,
         total_size=total_size,
-        list=[_build_care_invitation_response(invitation) for invitation in rows],
+        list=[
+            _build_care_invitation_response(invitation, inviter_name, invitee_name)
+            for invitation, inviter_name, invitee_name in rows
+        ],
     )
 
 
@@ -140,6 +147,21 @@ def _ensure_no_active_relationship_on_create(
         raise care_relationship_already_exists_for_create_error()
 
 
+def _ensure_no_pending_invitation_for_relationship(
+    *,
+    caregiver_user_id: uuid.UUID,
+    patient_id: uuid.UUID,
+    db: Session,
+) -> None:
+    existing_invitation = get_pending_care_invitation_for_relationship(
+        db=db,
+        caregiver_user_id=caregiver_user_id,
+        patient_id=patient_id,
+    )
+    if existing_invitation is not None:
+        raise pending_care_invitation_already_exists_error()
+
+
 def _add_invite_patient(
     *,
     payload: CreateCareInvitationPayload,
@@ -166,6 +188,11 @@ def _add_invite_patient(
         patient_id=invitee_patient.id,
         db=db,
     )
+    _ensure_no_pending_invitation_for_relationship(
+        caregiver_user_id=payload.user_id,
+        patient_id=invitee_patient.id,
+        db=db,
+    )
 
     return _create_care_invitation(payload=payload, db=db)
 
@@ -175,9 +202,6 @@ def _add_invite_caregiver(
     payload: CreateCareInvitationPayload,
     db: Session,
 ) -> CreateCareInvitationResponse:
-    if payload.patient_id is None:
-        raise invite_caregiver_patient_id_required_error()
-
     invitee_user = get_user_by_email(db=db, email=payload.invitee_email)
     if invitee_user is None:
         raise invitee_user_not_found_error()
@@ -187,31 +211,53 @@ def _add_invite_caregiver(
         invitee_user_id=invitee_user.id,
     )
 
-    accessible = validate_patient_access(
-        db=db,
-        user_id=payload.user_id,
-        patient_id=payload.patient_id,
-    )
-    ensure_can_admin(permission_level=accessible.permission_level)
+    inviter_patient = get_patient_by_user_id(db=db, user_id=payload.user_id)
+    if inviter_patient is None:
+        raise inviter_patient_not_found_error()
+
+    patient_id = inviter_patient.id
 
     _ensure_no_active_relationship_on_create(
         caregiver_user_id=invitee_user.id,
-        patient_id=payload.patient_id,
+        patient_id=patient_id,
+        db=db,
+    )
+    _ensure_no_pending_invitation_for_relationship(
+        caregiver_user_id=invitee_user.id,
+        patient_id=patient_id,
         db=db,
     )
 
-    return _create_care_invitation(payload=payload, db=db)
+    return _create_care_invitation(
+        payload=payload.model_copy(update={"patient_id": patient_id}),
+        db=db,
+    )
 
 
-def add_care_invitation(
+def add_patient_invitation(
     *,
     payload: CreateCareInvitationPayload,
     db: Session,
 ) -> CreateCareInvitationResponse:
-    if payload.invitation_type == InvitationType.INVITE_PATIENT:
-        return _add_invite_patient(payload=payload, db=db)
+    return _add_invite_patient(
+        payload=payload.model_copy(
+            update={"invitation_type": InvitationType.INVITE_PATIENT}
+        ),
+        db=db,
+    )
 
-    return _add_invite_caregiver(payload=payload, db=db)
+
+def add_caregiver_invitation(
+    *,
+    payload: CreateCareInvitationPayload,
+    db: Session,
+) -> CreateCareInvitationResponse:
+    return _add_invite_caregiver(
+        payload=payload.model_copy(
+            update={"invitation_type": InvitationType.INVITE_CAREGIVER}
+        ),
+        db=db,
+    )
 
 
 def revoke_invitation(

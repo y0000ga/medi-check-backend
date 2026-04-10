@@ -12,18 +12,23 @@ from app.core.validators import (
     validate_required_string_field,
 )
 from app.repositories.care_relationship import add_care_relationship
-from app.repositories.patient import count_patients, create_patient, list_patients
-from app.repositories.user import get_user_by_email
+from app.repositories.patient import (
+    count_patients,
+    create_patient,
+    list_patient_options,
+    list_patients,
+)
 from app.schemas.patient import (
     CreatePatientPayload,
     CreatePatientResponse,
     DetailPatientPayload,
     DetailPatientResponse,
+    ListPatientOptionsResponse,
     ListPatientsPayload,
     ListPatientsResponse,
+    PatientOptionResponse,
     PatientResponse,
 )
-from app.services.errors.patient import patient_email_requires_invitation_error
 from app.services.permissions import ensure_can_read
 from app.services.transactions import db_transaction
 from app.services.validators.patient import validate_patient_access
@@ -49,6 +54,22 @@ def get_patient_list(payload: ListPatientsPayload, db: Session) -> ListPatientsR
         total_size=total_size,
         list=items,
     )
+
+
+def get_patient_options(
+    payload: ListPatientsPayload, db: Session
+) -> ListPatientOptionsResponse:
+    rows = list_patient_options(query=payload, db=db)
+    items = [
+        PatientOptionResponse(
+            id=patient.id,
+            name=patient.name,
+            avatar_url=patient.avatar_url,
+            permission_level=permission_level,
+        )
+        for patient, permission_level in rows
+    ]
+    return ListPatientOptionsResponse(list=items)
 
 
 def get_patient_detail(
@@ -89,11 +110,6 @@ def add_new_patient(
         trim=True,
         empty_as_none=True,
     )
-    if payload.email is not None:
-        existing_user = get_user_by_email(db=db, email=payload.email)
-        if existing_user is not None:
-            raise patient_email_requires_invitation_error()
-
     with db_transaction(db):
         patient = create_patient(
             db,

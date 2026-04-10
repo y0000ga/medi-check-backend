@@ -48,11 +48,9 @@ class Schedule(Base):
 
     timezone: Mapped[str] = mapped_column(String(64), nullable=False)
 
-    started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    start_date: Mapped[date] = mapped_column(Date, nullable=False)
 
-    time_slots: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    time_slots: Mapped[list[str]] = mapped_column(JSON, nullable=False)
 
     amount: Mapped[int] = mapped_column(Integer, nullable=False)
 

@@ -7,6 +7,8 @@ from app.core.enums.care_relationship import PermissionLevel, RelationshipStatus
 from app.models import CareRelationship, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.patient import ListPatientsQuery
+from app.core.validators import validate_optional_string_field
+from app.core.validation_rules import NAME_MAX_LENGTH, NAME_MIN_LENGTH
 
 
 def _get_order_column(query: ListPatientsQuery):
@@ -31,6 +33,18 @@ def _build_list_stmt(query: ListPatientsQuery):
             & (CareRelationship.status.is_not(RelationshipStatus.REVOKED)),
         )
     )
+
+    normalized_search = validate_optional_string_field(
+        field_name="search",
+        value=query.search,
+        min_length=NAME_MIN_LENGTH,
+        max_length=NAME_MAX_LENGTH,
+        trim=True,
+        empty_as_none=True,
+    )
+
+    if normalized_search is not None:
+        stmt = stmt.where(Patient.name.ilike(f"%{normalized_search}%"))
 
     return stmt
 
@@ -97,6 +111,18 @@ def list_patients(
     # result.all() 取全部
     rows = result.all()
     return list(rows)
+
+
+def list_patient_options(
+    db: Session, query: ListPatientsQuery
+) -> list[Row[tuple[Patient, PermissionLevel]]]:
+    stmt = _build_list_stmt(query)
+    order_column = _get_order_column(query)
+    stmt = apply_sort_order(
+        stmt, order_column=order_column, sort_order=query.sort_order
+    )
+    result = db.execute(stmt)
+    return list(result.all())
 
 
 def count_patients(db: Session, query: ListPatientsQuery) -> int:

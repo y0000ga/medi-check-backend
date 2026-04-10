@@ -12,8 +12,11 @@ from app.schemas.base import PaginationRequest, PaginationResponse
 class HistoryResponse(BaseModel):
     id: uuid.UUID
     patient_id: uuid.UUID
+    patient_name: str
     schedule_id: uuid.UUID | None
     medication_id: uuid.UUID | None
+    medication_name: str
+    medication_dosage_form: DosageForm | None
     scheduled_at: datetime
     intake_at: datetime | None
     status: HistoryStatus
@@ -40,7 +43,6 @@ class ListHistoriesQuery(PaginationRequest):
 
 
 class ListHistoriesQueryParams(PaginationRequest):
-    patient_ids: list[uuid.UUID] | None = None
     medication_id: uuid.UUID | None = None
     status: HistoryStatus | None = None
     from_date: date | None = None

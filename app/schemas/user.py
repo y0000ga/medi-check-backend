@@ -8,6 +8,7 @@ from app.core.enums.user import UserStatus
 
 class UserResponse(BaseModel):
     id: uuid.UUID
+    patient_id: uuid.UUID | None
     email: EmailStr
     name: str
     avatar_url: str | None

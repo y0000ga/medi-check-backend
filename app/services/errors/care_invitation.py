@@ -30,7 +30,7 @@ def pending_care_invitation_already_exists_error() -> AppException:
         details=[
             ValidationErrorDetail(
                 field="invitee_email",
-                message="A pending invitation already exists for this invitee",
+                message="A pending invitation already exists for this care relationship",
                 type="duplicate",
             )
         ],
@@ -60,6 +60,20 @@ def invite_caregiver_patient_id_required_error() -> AppException:
                 field="patient_id",
                 message="patient_id is required when invitation_type is invite_caregiver",
                 type="required",
+            )
+        ],
+    )
+
+
+def inviter_patient_not_found_error() -> AppException:
+    return AppException(
+        status_code=400,
+        message="Request validation failed",
+        details=[
+            ValidationErrorDetail(
+                field="invitation_type",
+                message="You must create your patient profile before inviting a caregiver",
+                type="not_found",
             )
         ],
     )
