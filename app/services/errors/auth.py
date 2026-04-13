@@ -3,7 +3,7 @@ from app.core.exceptions import AppException
 
 def duplicate_email_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=409,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
@@ -35,9 +35,16 @@ def invalid_credentials_error() -> AppException:
         ],
     )
 
-def invalid_user_status() -> AppException:
+def invited_user_error() -> AppException:
     return AppException(
-        status_code=401,
+        status_code=403,
+        message="Invited user is not active yet",
+    )
+
+
+def disabled_user_error() -> AppException:
+    return AppException(
+        status_code=403,
         message="Disabled User",
     )
 

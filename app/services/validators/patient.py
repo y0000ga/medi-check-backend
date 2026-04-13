@@ -7,7 +7,10 @@ from app.repositories.care_relationship import get_active_care_relationship
 from app.repositories.patient import get_patient_by_id
 from app.schemas.care_relationship import DetailCareRelationshipQuery
 from app.services.access import PatientAccess
-from app.services.errors.patient import patient_access_denied_error
+from app.services.errors.patient import (
+    patient_access_denied_error,
+    patient_not_found_error,
+)
 
 
 def validate_patient_access(
@@ -16,7 +19,7 @@ def validate_patient_access(
     target_patient = get_patient_by_id(patient_id=patient_id, db=db)
 
     if target_patient is None:
-        raise patient_access_denied_error()
+        raise patient_not_found_error()
 
     if target_patient.linked_user_id == user_id:
         return PatientAccess(

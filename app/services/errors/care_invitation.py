@@ -2,16 +2,23 @@ from app.core.exceptions import AppException
 from app.schemas.base import ValidationErrorDetail
 
 
+def care_invitation_not_found_error() -> AppException:
+    return AppException(
+        status_code=404,
+        message="CareInvitation not found",
+    )
+
+
 def care_invitation_access_denied_error() -> AppException:
     return AppException(
-        status_code=401,
+        status_code=403,
         message="Cannot access CareInvitation",
     )
 
 
 def invitee_user_not_found_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=404,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
@@ -25,7 +32,7 @@ def invitee_user_not_found_error() -> AppException:
 
 def pending_care_invitation_already_exists_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=409,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
@@ -37,15 +44,43 @@ def pending_care_invitation_already_exists_error() -> AppException:
     )
 
 
-def care_invitation_not_pending_error() -> AppException:
+def care_invitation_already_accepted_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=409,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
                 field="invitation_id",
-                message="Only pending invitations can be updated",
-                type="invalid",
+                message="Invitation has already been accepted",
+                type="conflict",
+            )
+        ],
+    )
+
+
+def care_invitation_already_declined_error() -> AppException:
+    return AppException(
+        status_code=409,
+        message="Request validation failed",
+        details=[
+            ValidationErrorDetail(
+                field="invitation_id",
+                message="Invitation has already been declined",
+                type="conflict",
+            )
+        ],
+    )
+
+
+def care_invitation_already_revoked_error() -> AppException:
+    return AppException(
+        status_code=409,
+        message="Request validation failed",
+        details=[
+            ValidationErrorDetail(
+                field="invitation_id",
+                message="Invitation has already been revoked",
+                type="conflict",
             )
         ],
     )
@@ -67,7 +102,7 @@ def invite_caregiver_patient_id_required_error() -> AppException:
 
 def inviter_patient_not_found_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=404,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
@@ -95,7 +130,7 @@ def invite_patient_patient_id_not_allowed_error() -> AppException:
 
 def care_invitation_relationship_already_exists_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=409,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
@@ -109,7 +144,7 @@ def care_invitation_relationship_already_exists_error() -> AppException:
 
 def invitee_patient_not_found_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=404,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(
@@ -137,7 +172,7 @@ def cannot_invite_self_error() -> AppException:
 
 def care_relationship_already_exists_for_create_error() -> AppException:
     return AppException(
-        status_code=400,
+        status_code=409,
         message="Request validation failed",
         details=[
             ValidationErrorDetail(

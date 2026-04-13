@@ -33,7 +33,7 @@ from app.schemas.schedule import (
 )
 from app.services.errors.schedule import (
     invalid_schedule_event_date_range_error,
-    schedule_access_denied_error,
+    schedule_not_found_error,
     schedule_event_date_range_too_large_error,
 )
 from app.services.permissions import ensure_can_read, ensure_can_write
@@ -492,7 +492,7 @@ def get_schedule_detail(
 ) -> ScheduleDetailResponse:
     schedule = get_schedule_by_id(db=db, schedule_id=payload.schedule_id)
     if schedule is None:
-        raise schedule_access_denied_error()
+        raise schedule_not_found_error()
 
     access = validate_medication_access(
         db=db,
@@ -533,7 +533,7 @@ def update_schedule(
     with db_transaction(db):
         schedule = get_schedule_by_id(db=db, schedule_id=payload.schedule_id)
         if schedule is None:
-            raise schedule_access_denied_error()
+            raise schedule_not_found_error()
 
         access = validate_medication_access(
             db=db,
@@ -566,7 +566,7 @@ def delete_schedule(
     with db_transaction(db):
         schedule = get_schedule_by_id(db=db, schedule_id=payload.schedule_id)
         if schedule is None:
-            raise schedule_access_denied_error()
+            raise schedule_not_found_error()
 
         access = validate_medication_access(
             db=db,

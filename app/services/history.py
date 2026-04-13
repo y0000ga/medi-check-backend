@@ -32,7 +32,8 @@ from app.schemas.history import (
 )
 from app.services.access import MedicationAccess
 from app.services.errors.history import (
-    history_access_denied_error,
+    duplicate_quick_check_history_error,
+    history_not_found_error,
     invalid_history_feeling_error,
     invalid_history_taken_amount_error,
     invalid_quick_check_schedule_event_error,
@@ -283,7 +284,7 @@ def update_history(
     with db_transaction(db):
         history = get_history_by_id(db=db, history_id=payload.history_id)
         if history is None:
-            raise history_access_denied_error()
+            raise history_not_found_error()
 
         if history.medication_id is not None:
             access = validate_medication_access(

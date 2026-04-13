@@ -21,9 +21,16 @@ def _schedule_validation_error(
     )
 
 
+def schedule_not_found_error() -> AppException:
+    return AppException(
+        status_code=404,
+        message="Schedule not found",
+    )
+
+
 def schedule_access_denied_error() -> AppException:
     return AppException(
-        status_code=401,
+        status_code=403,
         message="Cannot access Schedule",
     )
 

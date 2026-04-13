@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.repositories.medication import get_medication_by_id
 from app.services.access import MedicationAccess
-from app.services.errors.medication import medication_access_denied_error
+from app.services.errors.medication import medication_not_found_error
 from app.services.validators.patient import validate_patient_access
 
 
@@ -15,7 +15,7 @@ def validate_medication_access(
     existed_medication = get_medication_by_id(db=db, medication_id=medication_id)
 
     if existed_medication is None:
-        raise medication_access_denied_error()
+        raise medication_not_found_error()
 
     access = validate_patient_access(
         db=db, user_id=user_id, patient_id=existed_medication.patient_id

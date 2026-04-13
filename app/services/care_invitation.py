@@ -36,9 +36,12 @@ from app.schemas.care_invitation import (
 )
 from app.schemas.care_relationship import DetailCareRelationshipQuery
 from app.services.errors.care_invitation import (
+    care_invitation_already_accepted_error,
+    care_invitation_already_declined_error,
+    care_invitation_already_revoked_error,
     cannot_invite_self_error,
     care_invitation_access_denied_error,
-    care_invitation_not_pending_error,
+    care_invitation_not_found_error,
     care_invitation_relationship_already_exists_error,
     care_relationship_already_exists_for_create_error,
     invite_caregiver_patient_id_required_error,
@@ -49,6 +52,17 @@ from app.services.errors.care_invitation import (
     pending_care_invitation_already_exists_error,
 )
 from app.services.transactions import db_transaction
+
+
+def _ensure_invitation_is_pending(*, invitation: CareInvitation) -> None:
+    if invitation.status == InvitationStatus.ACCEPTED:
+        raise care_invitation_already_accepted_error()
+
+    if invitation.status == InvitationStatus.DECLINED:
+        raise care_invitation_already_declined_error()
+
+    if invitation.status == InvitationStatus.REVOKED:
+        raise care_invitation_already_revoked_error()
 
 
 def _build_care_invitation_response(
@@ -266,11 +280,13 @@ def revoke_invitation(
     db: Session,
 ) -> RevokeCareInvitationResponse:
     invitation = get_care_invitation_by_id(db=db, invitation_id=payload.invitation_id)
-    if invitation is None or invitation.inviter_user_id != payload.user_id:
+    if invitation is None:
+        raise care_invitation_not_found_error()
+    if invitation.inviter_user_id != payload.user_id:
         raise care_invitation_access_denied_error()
 
     if invitation.status != InvitationStatus.PENDING:
-        raise care_invitation_not_pending_error()
+        _ensure_invitation_is_pending(invitation=invitation)
 
     with db_transaction(db):
         revoke_care_invitation(invitation=invitation)
@@ -286,7 +302,7 @@ def decline_invitation(
 ) -> DeclineCareInvitationResponse:
     invitation = get_care_invitation_by_id(db=db, invitation_id=payload.invitation_id)
     if invitation is None:
-        raise care_invitation_access_denied_error()
+        raise care_invitation_not_found_error()
 
     can_decline = (
         invitation.invitee_user_id == payload.user_id
@@ -296,7 +312,7 @@ def decline_invitation(
         raise care_invitation_access_denied_error()
 
     if invitation.status != InvitationStatus.PENDING:
-        raise care_invitation_not_pending_error()
+        _ensure_invitation_is_pending(invitation=invitation)
 
     with db_transaction(db):
         decline_care_invitation(invitation=invitation)
@@ -312,7 +328,7 @@ def accept_invitation(
 ) -> AcceptCareInvitationResponse:
     invitation = get_care_invitation_by_id(db=db, invitation_id=payload.invitation_id)
     if invitation is None:
-        raise care_invitation_access_denied_error()
+        raise care_invitation_not_found_error()
 
     can_accept = (
         invitation.invitee_user_id == payload.user_id
@@ -322,7 +338,7 @@ def accept_invitation(
         raise care_invitation_access_denied_error()
 
     if invitation.status != InvitationStatus.PENDING:
-        raise care_invitation_not_pending_error()
+        _ensure_invitation_is_pending(invitation=invitation)
 
     if invitation.invitation_type == InvitationType.INVITE_PATIENT:
         patient = get_patient_by_user_id(db=db, user_id=payload.user_id)
