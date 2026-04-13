@@ -519,6 +519,17 @@ def update_schedule(
     db: Session,
     payload: EditSchedulePayload,
 ) -> EditScheduleResponse:
+    validate_create_schedule_rules(
+        time_slots=payload.time_slots,
+        interval=payload.interval,
+        frequency_unit=payload.frequency_unit,
+        weekdays=payload.weekdays,
+        end_type=payload.end_type,
+        until_date=payload.until_date,
+        start_date=payload.start_date,
+        occurrence_count=payload.occurrence_count,
+    )
+
     with db_transaction(db):
         schedule = get_schedule_by_id(db=db, schedule_id=payload.schedule_id)
         if schedule is None:
@@ -531,41 +542,18 @@ def update_schedule(
         )
         ensure_can_write(permission_level=access.permission_level)
 
-        fields = payload.model_fields_set - {"user_id", "schedule_id"}
-        # 要檢視彼此 validation 的時候就要這樣做 (next_*)
-        next_start_date = (
-            payload.start_date if "start_date" in fields else schedule.start_date
-        )
-        next_frequency_unit = (
-            payload.frequency_unit
-            if "frequency_unit" in fields
-            else schedule.frequency_unit
-        )
-        next_interval = payload.interval if "interval" in fields else schedule.interval
-        next_weekdays = payload.weekdays if "weekdays" in fields else schedule.weekdays
-        next_end_type = payload.end_type if "end_type" in fields else schedule.end_type
-        next_until_date = (
-            payload.until_date if "until_date" in fields else schedule.until_date
-        )
-        next_occurrence_count = (
-            payload.occurrence_count
-            if "occurrence_count" in fields
-            else schedule.occurrence_count
-        )
+        schedule.timezone = payload.timezone
+        schedule.start_date = payload.start_date
+        schedule.time_slots = payload.time_slots
+        schedule.amount = payload.amount
+        schedule.dose_unit = payload.dose_unit
+        schedule.frequency_unit = payload.frequency_unit
+        schedule.interval = payload.interval
+        schedule.weekdays = payload.weekdays
+        schedule.end_type = payload.end_type
+        schedule.until_date = payload.until_date
+        schedule.occurrence_count = payload.occurrence_count
 
-        validate_create_schedule_rules(
-            time_slots=payload.time_slots if "time_slots" in fields else schedule.time_slots,
-            interval=next_interval,
-            frequency_unit=next_frequency_unit,
-            weekdays=next_weekdays,
-            end_type=next_end_type,
-            until_date=next_until_date,
-            start_date=next_start_date,
-            occurrence_count=next_occurrence_count,
-        )
-
-        for field in fields:
-            setattr(schedule, field, getattr(payload, field))
 
     return EditScheduleResponse(schedule_id=payload.schedule_id)
 

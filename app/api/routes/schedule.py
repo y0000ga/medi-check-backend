@@ -114,7 +114,8 @@ def edit_schedule(
     db: Session = Depends(get_db),
 ) -> ApiResponse[EditScheduleResponse]:
     payload = EditSchedulePayload(
-        **body.model_dump(exclude_unset=True),
+        # 因為 Schedule 內規則複雜，所以直接傳整個編輯後的 Schedule 進來
+        **body.model_dump(),
         user_id=user.id,
         schedule_id=schedule_id,
     )

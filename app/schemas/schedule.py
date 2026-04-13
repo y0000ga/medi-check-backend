@@ -115,18 +115,8 @@ class CreateScheduleResponse(BaseModel):
     id: uuid.UUID
 
 
-class EditScheduleBody(BaseModel):
-    timezone: str | None = None
-    start_date: date | None = None
-    time_slots: list[str] | None = None
-    amount: int | None = None
-    dose_unit: DosageUnit | None = None
-    frequency_unit: FrequencyUnit | None = None
-    interval: int | None = None
-    weekdays: list[int] | None = None
-    end_type: EndType | None = None
-    until_date: date | None = None
-    occurrence_count: int | None = None
+class EditScheduleBody(CreateScheduleBody):
+    pass
 
 
 class EditSchedulePayload(EditScheduleBody):
