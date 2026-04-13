@@ -5,6 +5,7 @@ from sqlalchemy import Row, func, select
 from sqlalchemy.orm import Session
 
 from app.core.enums.care_relationship import RelationshipStatus
+from app.core.enums.history import HistoryStatus
 from app.core.enums.medication import DosageForm
 from app.models import CareRelationship, History, Medication, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
@@ -127,3 +128,18 @@ def count_histories(
     stmt = _build_history_list_stmt(query=query)
     stmt = stmt.with_only_columns(func.count()).order_by(None)
     return db.scalar(stmt) or 0
+
+
+def count_histories_by_status(
+    *,
+    db: Session,
+    query: ListHistoriesQuery,
+) -> dict[HistoryStatus, int]:
+    stmt = _build_history_list_stmt(query=query)
+    stmt = (
+        stmt.with_only_columns(History.status, func.count())
+        .group_by(History.status)
+        .order_by(None)
+    )
+    rows = db.execute(stmt).all()
+    return {status: count for status, count in rows}

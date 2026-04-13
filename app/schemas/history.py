@@ -11,26 +11,39 @@ from app.schemas.base import PaginationRequest, PaginationResponse
 
 class HistoryResponse(BaseModel):
     id: uuid.UUID
-    patient_id: uuid.UUID
-    patient_name: str
-    schedule_id: uuid.UUID | None
-    medication_id: uuid.UUID | None
-    medication_name: str
-    medication_dosage_form: DosageForm | None
-    scheduled_at: datetime
     intake_at: datetime | None
     status: HistoryStatus
     source: HistorySource
-    amount_snapshot: int
-    dose_unit_snapshot: DosageUnit | None
     taken_amount: int | None
-    medication_name_snapshot: str
 
 
-class HistoryDetailResponse(HistoryResponse):
+class HistoryPatientSnapshot(BaseModel):
+    id: uuid.UUID
+    name: str
+
+
+class HistoryMedicationSnapshot(BaseModel):
+    id: uuid.UUID | None
+    name: str
+    dosage_form: DosageForm | None
+
+
+class HistoryScheduleSnapshot(BaseModel):
+    id: uuid.UUID | None
+    scheduled_at: datetime
+    amount: int
+    dose_unit: DosageUnit | None
+
+
+class HistoryListItemResponse(HistoryResponse):
+    patient_snapshot: HistoryPatientSnapshot
+    medication_snapshot: HistoryMedicationSnapshot
+    schedule_snapshot: HistoryScheduleSnapshot
+
+
+class HistoryDetailResponse(HistoryListItemResponse):
     memo: str | None
     feeling: int | None
-    medication_dosage_form_snapshot: DosageForm | None
 
 
 class ListHistoriesQuery(PaginationRequest):
@@ -54,7 +67,9 @@ class ListHistoriesPayload(ListHistoriesQuery):
 
 
 class ListHistoriesResponse(PaginationResponse):
-    list: list[HistoryResponse]
+    intaken_size: int
+    missed_size: int
+    list: list[HistoryListItemResponse]
 
 
 class DetailHistoryPayload(BaseModel):
@@ -74,6 +89,8 @@ class QuickCheckHistoryPayload(QuickCheckHistoryBody):
 
 class QuickCheckHistoryResponse(BaseModel):
     id: uuid.UUID
+    status: HistoryStatus
+    intake_at: datetime | None
 
 
 class EditHistoryBody(BaseModel):

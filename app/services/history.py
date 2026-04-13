@@ -1,6 +1,7 @@
 import uuid
 from datetime import UTC, datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
@@ -15,8 +16,10 @@ from app.core.validators import validate_optional_string_field
 from app.models import History
 from app.repositories.history import (
     count_histories,
+    count_histories_by_status,
     create_history,
     get_history_by_id,
+    get_history_by_schedule_occurrence,
     list_histories,
 )
 from app.repositories.schedule import get_schedule_by_id
@@ -25,7 +28,10 @@ from app.schemas.history import (
     EditHistoryPayload,
     EditHistoryResponse,
     HistoryDetailResponse,
-    HistoryResponse,
+    HistoryListItemResponse,
+    HistoryMedicationSnapshot,
+    HistoryPatientSnapshot,
+    HistoryScheduleSnapshot,
     ListHistoriesPayload,
     ListHistoriesResponse,
     QuickCheckHistoryPayload,
@@ -68,25 +74,28 @@ def _build_history_response(
     patient_name: str,
     medication_name: str | None,
     medication_dosage_form: DosageForm | None,
-) -> HistoryResponse:
-    return HistoryResponse(
+) -> HistoryListItemResponse:
+    return HistoryListItemResponse(
         id=history.id,
-        patient_id=history.patient_id,
-        patient_name=patient_name,
-        schedule_id=history.schedule_id,
-        medication_id=history.medication_id,
-        medication_name=medication_name or history.medication_name_snapshot,
-        medication_dosage_form=(
-            medication_dosage_form or history.medication_dosage_form_snapshot
-        ),
-        scheduled_at=history.scheduled_at_snapshot,
-        intake_at=history.intake_at,
+        intake_at=ensure_utc_datetime(history.intake_at),
         status=history.status,
         source=history.source,
-        amount_snapshot=history.amount_snapshot,
-        dose_unit_snapshot=history.dose_unit_snapshot,
         taken_amount=history.taken_amount,
-        medication_name_snapshot=history.medication_name_snapshot,
+        patient_snapshot=HistoryPatientSnapshot(
+            id=history.patient_id,
+            name=patient_name,
+        ),
+        medication_snapshot=HistoryMedicationSnapshot(
+            id=history.medication_id,
+            name=medication_name or history.medication_name_snapshot,
+            dosage_form=medication_dosage_form or history.medication_dosage_form_snapshot,
+        ),
+        schedule_snapshot=HistoryScheduleSnapshot(
+            id=history.schedule_id,
+            scheduled_at=require_utc_datetime(history.scheduled_at_snapshot),
+            amount=history.amount_snapshot,
+            dose_unit=history.dose_unit_snapshot,
+        ),
     )
 
 
@@ -129,10 +138,13 @@ def get_history_list(
 
     rows = list_histories(db=db, query=payload)
     total_size = count_histories(db=db, query=payload)
+    status_counts = count_histories_by_status(db=db, query=payload)
 
     return ListHistoriesResponse(
         page=payload.page,
         total_size=total_size,
+        intaken_size=status_counts.get(HistoryStatus.taken, 0),
+        missed_size=status_counts.get(HistoryStatus.missed, 0),
         list=[
             _build_history_response(
                 history=history,
@@ -152,7 +164,7 @@ def get_history_detail(
 ) -> HistoryDetailResponse:
     history = get_history_by_id(db=db, history_id=payload.history_id)
     if history is None:
-        raise history_access_denied_error()
+        raise history_not_found_error()
 
     medication_access: MedicationAccess | None = None
     if history.medication_id is not None:
@@ -178,31 +190,35 @@ def get_history_detail(
 
     return HistoryDetailResponse(
         id=history.id,
-        patient_id=history.patient_id,
-        patient_name=patient_access.patient.name,
-        schedule_id=history.schedule_id,
-        medication_id=history.medication_id,
-        medication_name=(
-            medication_access.medication.name
-            if medication_access is not None
-            else history.medication_name_snapshot
-        ),
-        medication_dosage_form=(
-            medication_access.medication.dosage_form
-            if medication_access is not None
-            else history.medication_dosage_form_snapshot
-        ),
-        scheduled_at=history.scheduled_at_snapshot,
-        intake_at=history.intake_at,
+        intake_at=ensure_utc_datetime(history.intake_at),
         status=history.status,
         source=history.source,
-        amount_snapshot=history.amount_snapshot,
-        dose_unit_snapshot=history.dose_unit_snapshot,
         taken_amount=history.taken_amount,
-        medication_name_snapshot=history.medication_name_snapshot,
+        patient_snapshot=HistoryPatientSnapshot(
+            id=history.patient_id,
+            name=patient_access.patient.name,
+        ),
+        medication_snapshot=HistoryMedicationSnapshot(
+            id=history.medication_id,
+            name=(
+                medication_access.medication.name
+                if medication_access is not None
+                else history.medication_name_snapshot
+            ),
+            dosage_form=(
+                medication_access.medication.dosage_form
+                if medication_access is not None
+                else history.medication_dosage_form_snapshot
+            ),
+        ),
+        schedule_snapshot=HistoryScheduleSnapshot(
+            id=history.schedule_id,
+            scheduled_at=require_utc_datetime(history.scheduled_at_snapshot),
+            amount=history.amount_snapshot,
+            dose_unit=history.dose_unit_snapshot,
+        ),
         memo=history.memo,
         feeling=history.feeling,
-        medication_dosage_form_snapshot=history.medication_dosage_form_snapshot,
     )
 
 
@@ -237,9 +253,17 @@ def add_quick_check_history(
 
         if not schedule_has_occurrence_at(
             schedule=schedule,
-            scheduled_at=payload.scheduled_at,
+            scheduled_at=scheduled_at_in_schedule_timezone,
         ):
             raise invalid_quick_check_schedule_event_error()
+
+        existing_history = get_history_by_schedule_occurrence(
+            db=db,
+            schedule_id=schedule.id,
+            scheduled_at=scheduled_at_utc,
+        )
+        if existing_history is not None:
+            raise duplicate_quick_check_history_error()
 
         history = create_history(
             db=db,
@@ -249,7 +273,7 @@ def add_quick_check_history(
                 medication_id=access.medication.id,
                 amount_snapshot=schedule.amount,
                 dose_unit_snapshot=schedule.dose_unit,
-                scheduled_at_snapshot=payload.scheduled_at,
+                scheduled_at_snapshot=scheduled_at_utc,
                 intake_at=intake_at,
                 status=status,
                 taken_amount=schedule.amount,
@@ -262,7 +286,11 @@ def add_quick_check_history(
         )
 
     db.refresh(history)
-    return QuickCheckHistoryResponse(id=history.id)
+    return QuickCheckHistoryResponse(
+        id=history.id,
+        status=history.status,
+        intake_at=ensure_utc_datetime(history.intake_at),
+    )
 
 
 def update_history(
@@ -270,6 +298,10 @@ def update_history(
     db: Session,
     payload: EditHistoryPayload,
 ) -> EditHistoryResponse:
+    normalized_intake_at = None
+    if "intake_at" in payload.model_fields_set:
+        normalized_intake_at = ensure_utc_datetime(payload.intake_at)
+
     normalized_memo = None
     if "memo" in payload.model_fields_set:
         normalized_memo = validate_optional_string_field(
@@ -308,7 +340,7 @@ def update_history(
             ensure_can_write(permission_level=access.permission_level)
 
         if "intake_at" in payload.model_fields_set:
-            history.intake_at = payload.intake_at
+            history.intake_at = normalized_intake_at
 
         if "taken_amount" in payload.model_fields_set:
             history.taken_amount = payload.taken_amount
