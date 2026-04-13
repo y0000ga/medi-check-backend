@@ -1,7 +1,8 @@
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
-
+from app.core.datetime import require_utc_datetime
 from app.core.enums.history import HistorySource, HistoryStatus
 from app.models import History
 from app.repositories.history import (
@@ -24,16 +25,19 @@ def create_missed_histories(
     grace_period: timedelta = DEFAULT_MISSED_GRACE_PERIOD,
 ) -> int:
     to_datetime = to_datetime or datetime.now(UTC)
-    if to_datetime < from_datetime:
+    normalized_from_datetime = require_utc_datetime(from_datetime)
+    normalized_to_datetime = require_utc_datetime(to_datetime)
+
+    if normalized_to_datetime < normalized_from_datetime:
         return 0
 
-    due_datetime = to_datetime - grace_period
-    if due_datetime < from_datetime:
+    due_datetime = normalized_to_datetime - grace_period
+    if due_datetime < normalized_from_datetime:
         return 0
 
     schedules = list_schedule_job_candidates(
         db=db,
-        from_date=from_datetime.date(),
+        from_date=normalized_from_datetime.date(),
         to_date=due_datetime.date(),
     )
     created_count = 0
@@ -47,17 +51,19 @@ def create_missed_histories(
             if medication is None:
                 continue
 
+            schedule_timezone = ZoneInfo(schedule.timezone)
             scheduled_times = list_schedule_occurrences_in_range(
                 schedule=schedule,
-                from_datetime=from_datetime,
-                to_datetime=due_datetime,
+                from_datetime=normalized_from_datetime.astimezone(schedule_timezone),
+                to_datetime=due_datetime.astimezone(schedule_timezone),
             )
 
             for scheduled_at in scheduled_times:
+                scheduled_at_utc = require_utc_datetime(scheduled_at)
                 existing_history = get_history_by_schedule_occurrence(
                     db=db,
                     schedule_id=schedule.id,
-                    scheduled_at=scheduled_at,
+                    scheduled_at=scheduled_at_utc,
                 )
                 if existing_history is not None:
                     continue
@@ -70,7 +76,7 @@ def create_missed_histories(
                         medication_id=medication.id,
                         amount_snapshot=schedule.amount,
                         dose_unit_snapshot=schedule.dose_unit,
-                        scheduled_at_snapshot=scheduled_at,
+                        scheduled_at_snapshot=scheduled_at_utc,
                         intake_at=None,
                         status=HistoryStatus.missed,
                         taken_amount=None,

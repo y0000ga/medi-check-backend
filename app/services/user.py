@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from app.core.datetime import ensure_utc_datetime
 from app.models import User
 from app.repositories.patient import get_patient_by_user_id
 from app.schemas.user import EditUserMeBody, EditUserResponse
@@ -16,6 +17,7 @@ from app.services.transactions import db_transaction
 def edit_current_user(
     payload: EditUserMeBody, user: User, db: Session
 ) -> EditUserResponse:
+    normalized_birth_date = ensure_utc_datetime(payload.birth_date)
     normalized_name = None
     normalized_avatar_url = None
 
@@ -51,8 +53,8 @@ def edit_current_user(
             patient.avatar_url = normalized_avatar_url
 
         if payload.birth_date is not None:
-            user.birth_date = payload.birth_date
-            patient.birth_date = payload.birth_date
+            user.birth_date = normalized_birth_date
+            patient.birth_date = normalized_birth_date
 
     db.refresh(user)
     return EditUserResponse(id=user.id)

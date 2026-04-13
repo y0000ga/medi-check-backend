@@ -2,6 +2,7 @@ import uuid
 
 from sqlalchemy.orm import Session
 
+from app.core.datetime import ensure_utc_datetime
 from app.core.enums.care_invitaion import InvitationStatus, InvitationType
 from app.models.care_invitation import CareInvitation
 from app.repositories.care_invitation import (
@@ -81,11 +82,11 @@ def _build_care_invitation_response(
         invitation_type=invitation.invitation_type,
         permission_level=invitation.permission_level,
         status=invitation.status,
-        sent_at=invitation.sent_at,
-        accepted_at=invitation.accepted_at,
-        declined_at=invitation.declined_at,
-        revoked_at=invitation.revoked_at,
-        expired_at=invitation.expired_at,
+        sent_at=ensure_utc_datetime(invitation.sent_at),
+        accepted_at=ensure_utc_datetime(invitation.accepted_at),
+        declined_at=ensure_utc_datetime(invitation.declined_at),
+        revoked_at=ensure_utc_datetime(invitation.revoked_at),
+        expired_at=ensure_utc_datetime(invitation.expired_at),
     )
 
 

@@ -4,6 +4,7 @@ from typing import Literal
 
 from sqlalchemy.orm import Session
 
+from app.core.datetime import ensure_utc_datetime, require_utc_datetime
 from app.core.enums.history import HistorySource, HistoryStatus
 from app.core.enums.medication import DosageForm
 from app.core.validation_rules import (
@@ -228,6 +229,11 @@ def add_quick_check_history(
             or schedule.patient_id != access.medication.patient_id
         ):
             raise schedule_access_denied_error()
+
+        scheduled_at_utc = require_utc_datetime(payload.scheduled_at)
+        scheduled_at_in_schedule_timezone = scheduled_at_utc.astimezone(
+            ZoneInfo(schedule.timezone)
+        )
 
         if not schedule_has_occurrence_at(
             schedule=schedule,

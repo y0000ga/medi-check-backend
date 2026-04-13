@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
 
+from app.core.datetime import ensure_utc_datetime, require_utc_datetime
 from app.core.enums.schedule import EndType, FrequencyUnit
 from app.models import History, Schedule
 from app.models.medication import Medication
@@ -308,14 +309,14 @@ def _build_schedule_event_response(
         medication_id=schedule.medication_id,
         medication_name=medication.name,
         medication_dosage_form=medication.dosage_form,
-        scheduled_at=scheduled_at,
+        scheduled_at=require_utc_datetime(scheduled_at),
         amount=schedule.amount,
         dose_unit=schedule.dose_unit,
         history=(
             ScheduleEventHistoryResponse(
                 id=history.id,
                 status=history.status,
-                intake_at=history.intake_at,
+                intake_at=ensure_utc_datetime(history.intake_at),
             )
             if history is not None
             else None
@@ -425,7 +426,7 @@ def get_schedule_match_list(
                     medication=medication,
                     patient_name=patient_name,
                     scheduled_at=scheduled_at,
-                    history=history_map.get((schedule.id, scheduled_at)),
+                    history=history_map.get((schedule.id, require_utc_datetime(scheduled_at))),
                 )
             )
 
