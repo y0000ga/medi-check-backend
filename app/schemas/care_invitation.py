@@ -67,6 +67,7 @@ class CreateCareInvitationPayload(BaseModel):
     patient_id: uuid.UUID | None = None
     invitee_email: str
     permission_level: PermissionLevel
+    invitation_type: InvitationType
 
 
 class CreateCareInvitationResponse(BaseModel):

@@ -403,11 +403,11 @@ def get_schedule_match_list(
     histories = list_histories_by_schedule_ids_and_date_range(
         db=db,
         schedule_ids=schedule_ids,
-        from_date=payload.from_date,
-        to_date=payload.to_date,
+        from_date=payload.from_date - timedelta(days=1),
+        to_date=payload.to_date + timedelta(days=1),
     )
     history_map = {
-        (history.schedule_id, history.scheduled_at_snapshot): history
+        (history.schedule_id, require_utc_datetime(history.scheduled_at_snapshot)): history
         for history in histories
         if history.schedule_id is not None
     }

@@ -1,3 +1,4 @@
+from typing import Any
 import uuid
 
 from sqlalchemy.orm import Session
@@ -14,23 +15,21 @@ from app.schemas.care_relationship import (
 )
 
 
-def _build_list_stmt(query: ListCareRelationshipQuery) -> Select:
+def _build_list_stmt(query: ListCareRelationshipQuery) -> Select[Any]:
     stmt = (
         select(CareRelationship, User.name, Patient.name)
         .join(User, User.id == CareRelationship.caregiver_user_id)
         .join(Patient, Patient.id == CareRelationship.patient_id)
         .where(
-        and_(
-            CareRelationship.revoked_at.is_(None),
-            CareRelationship.status.is_not(RelationshipStatus.REVOKED),
-        ),
+            and_(
+                CareRelationship.revoked_at.is_(None),
+                CareRelationship.status.is_not(RelationshipStatus.REVOKED),
+            ),
         )
     )
 
     if query.direction == CareRelationshipDirection.CAREGIVER:
-        if query.self_patient_id is None:
-            stmt = stmt.where(False)
-        else:
+        if query.self_patient_id is not None:
             stmt = stmt.where(CareRelationship.patient_id == query.self_patient_id)
     else:
         stmt = stmt.where(CareRelationship.caregiver_user_id == query.user_id)
