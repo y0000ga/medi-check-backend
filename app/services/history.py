@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime
-from typing import Literal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.orm import Session
@@ -52,21 +51,6 @@ from app.services.transactions import db_transaction
 from app.services.validators.medication import validate_medication_access
 from app.services.validators.patient import validate_patient_access
 
-HistoryFlow = Literal["quick_check", "manual", "system_missed"]
-
-
-def _get_history_status_and_source(
-    *,
-    flow: HistoryFlow,
-) -> tuple[HistoryStatus, HistorySource]:
-    if flow == "quick_check":
-        return HistoryStatus.taken, HistorySource.quickCheck
-
-    if flow == "manual":
-        return HistoryStatus.taken, HistorySource.manual
-
-    return HistoryStatus.missed, HistorySource.system
-
 
 def _build_history_response(
     *,
@@ -79,8 +63,8 @@ def _build_history_response(
         id=history.id,
         intake_at=ensure_utc_datetime(history.intake_at),
         status=history.status,
-        source=history.source,
         taken_amount=history.taken_amount,
+        source=history.source,
         patient_snapshot=HistoryPatientSnapshot(
             id=history.patient_id,
             name=patient_name,
@@ -192,8 +176,8 @@ def get_history_detail(
         id=history.id,
         intake_at=ensure_utc_datetime(history.intake_at),
         status=history.status,
-        source=history.source,
         taken_amount=history.taken_amount,
+        source=history.source,
         patient_snapshot=HistoryPatientSnapshot(
             id=history.patient_id,
             name=patient_access.patient.name,
@@ -228,7 +212,7 @@ def add_quick_check_history(
     payload: QuickCheckHistoryPayload,
 ) -> QuickCheckHistoryResponse:
     intake_at = datetime.now(UTC)
-    status, source = _get_history_status_and_source(flow="quick_check")
+    status = HistoryStatus.taken
 
     with db_transaction(db):
         access = validate_medication_access(
@@ -276,10 +260,10 @@ def add_quick_check_history(
                 scheduled_at_snapshot=scheduled_at_utc,
                 intake_at=intake_at,
                 status=status,
+                source=HistorySource.quickCheck,
                 taken_amount=schedule.amount,
                 memo=None,
                 feeling=None,
-                source=source,
                 medication_name_snapshot=access.medication.name,
                 medication_dosage_form_snapshot=access.medication.dosage_form,
             ),
@@ -290,6 +274,7 @@ def add_quick_check_history(
         id=history.id,
         status=history.status,
         intake_at=ensure_utc_datetime(history.intake_at),
+        source=history.source,
     )
 
 
@@ -341,6 +326,7 @@ def update_history(
 
         if "intake_at" in payload.model_fields_set:
             history.intake_at = normalized_intake_at
+            history.source = HistorySource.manual
 
         if "taken_amount" in payload.model_fields_set:
             history.taken_amount = payload.taken_amount

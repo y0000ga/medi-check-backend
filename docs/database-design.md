@@ -137,6 +137,12 @@
 
 `histories` 是系統中最重要的結果資料。它讓系統可以把「應該發生」和「實際發生」分開建模。
 
+另外，`histories.source` 也會記錄這筆結果是怎麼來的：
+
+- `quickCheck`：使用者在排程事件上快速確認
+- `manual`：使用者後來補填或修正 `intake_at`
+- `system`：background job 自動補出的 missed history
+
 ## 最重要的設計分離：`schedule` 與 `history`
 
 這個專案最關鍵的資料庫設計，不是單一資料表本身，而是 `schedules` 與 `histories` 的切分。

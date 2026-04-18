@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.core.enums.history import HistorySource, HistoryStatus
 from app.core.enums.medication import DosageForm
@@ -13,8 +13,11 @@ class HistoryResponse(BaseModel):
     id: uuid.UUID
     intake_at: datetime | None
     status: HistoryStatus
-    source: HistorySource
     taken_amount: int | None
+    source: HistorySource = Field(
+        description="Where this history came from",
+        examples=[HistorySource.quickCheck, HistorySource.manual, HistorySource.system],
+    )
 
 
 class HistoryPatientSnapshot(BaseModel):
@@ -91,6 +94,10 @@ class QuickCheckHistoryResponse(BaseModel):
     id: uuid.UUID
     status: HistoryStatus
     intake_at: datetime | None
+    source: HistorySource = Field(
+        description="Where this history came from",
+        examples=[HistorySource.quickCheck],
+    )
 
 
 class EditHistoryBody(BaseModel):

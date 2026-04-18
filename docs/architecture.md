@@ -63,6 +63,7 @@ route 主要只處理 request mapping。真正的權限判斷通常在：
 
 - `schedule`：定義規則
 - `history`：定義某次具體事件的結果
+- `history.source`：標記這筆結果是 `quickCheck`、`manual` 或 `system`
 
 也就是說：
 
@@ -87,5 +88,6 @@ route 主要只處理 request mapping。真正的權限判斷通常在：
 - `dose_unit_snapshot`
 - `medication_name_snapshot`
 - `medication_dosage_form_snapshot`
+- `source`
 
 這樣就算後來藥名或排程規則改了，歷史紀錄仍然保留當時的真實內容。

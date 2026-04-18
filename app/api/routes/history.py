@@ -22,9 +22,9 @@ from app.schemas.history import (
     QuickCheckHistoryResponse,
 )
 from app.services.history import (
-    add_quick_check_history,
     get_history_detail,
     get_history_list,
+    add_quick_check_history,
     update_history,
 )
 
@@ -38,6 +38,7 @@ def get_histories(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[ListHistoriesResponse]:
+    """List histories visible to the current user."""
     payload = ListHistoriesPayload(
         page=query.page,
         page_size=query.page_size,
@@ -60,6 +61,7 @@ def get_history(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[HistoryDetailResponse]:
+    """Get a single history detail."""
     payload = DetailHistoryPayload(user_id=user.id, history_id=history_id)
     response = get_history_detail(db=db, payload=payload)
     return success_response(response)
@@ -71,6 +73,7 @@ def quick_check_history(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[QuickCheckHistoryResponse]:
+    """Create a taken history from a matching schedule event."""
     payload = QuickCheckHistoryPayload(**body.model_dump(), user_id=user.id)
     response = add_quick_check_history(db=db, payload=payload)
     return success_response(response)
@@ -83,6 +86,7 @@ def edit_history(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ApiResponse[EditHistoryResponse]:
+    """Update a history and mark intake_at edits as manual."""
     payload = EditHistoryPayload(
         **body.model_dump(exclude_unset=True),
         user_id=user.id,

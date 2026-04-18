@@ -135,7 +135,48 @@
 4. backend 驗證 `scheduled_at` 是否符合該 schedule
 5. backend 建立 `histories`
 6. `histories` 會保存對應 snapshot
-7. 下次查同一天 event 時，就會看到對應的 `history`
+7. `history.source` 會是 `quickCheck`
+8. 下次查同一天 event 時，就會看到對應的 `history`
+
+### 回應範例
+
+`GET /histories` 與 `GET /histories/{history_id}` 會回傳類似這樣的資料：
+
+```json
+{
+  "id": "3a2a0f4d-7d4f-4c56-9f1c-3e7f6c7ecf1d",
+  "intake_at": "2026-04-18T09:32:00Z",
+  "status": "taken",
+  "taken_amount": 1,
+  "source": "quickCheck",
+  "patient_snapshot": {
+    "id": "4f3c0c7e-6d6b-4c90-9c67-8f1d2b1f3a20",
+    "name": "Amy"
+  },
+  "medication_snapshot": {
+    "id": "1cadab8f-e9d6-471a-8fff-33e2f552b1a0",
+    "name": "Vitamin C",
+    "dosage_form": "tablet"
+  },
+  "schedule_snapshot": {
+    "id": "0167823c-1e26-4aa3-b23f-9dc4f236dab0",
+    "scheduled_at": "2026-04-18T09:30:00Z",
+    "amount": 1,
+    "dose_unit": "tablet"
+  }
+}
+```
+
+如果是手動補填 `intake_at`，`source` 會變成 `manual`。
+
+### Manual 的實際流程
+
+1. `history` 先由 quick check 或 background job 建立
+2. 使用者之後補填或修正服藥時間
+3. 前端送出 `PATCH /histories/{history_id}`
+4. backend 更新 `intake_at`
+5. 只要 `intake_at` 有變更，該筆 `history.source` 就會標成 `manual`
+6. 其他欄位像 `memo`、`feeling`、`taken_amount` 只視為一般資訊更新
 
 ## 主要資料流圖
 
@@ -169,7 +210,15 @@ sequenceDiagram
     REPO->>DB: 寫入 history snapshot
     DB-->>REPO: created row
     REPO-->>SVC: history
-    SVC-->>API: QuickCheckHistoryResponse
+    SVC-->>API: QuickCheckHistoryResponse (source=quickCheck)
+    API-->>FE: success
+
+    FE->>API: PATCH /histories/{history_id}
+    API->>SVC: update_history(payload)
+    SVC->>SVC: 若 intake_at 有變更，標記 source=manual
+    SVC->>DB: 更新 history
+    DB-->>SVC: updated row
+    SVC-->>API: EditHistoryResponse
     API-->>FE: success
 ```
 

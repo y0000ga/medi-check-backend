@@ -8,6 +8,24 @@ from app.core.response import error_response
 from app.schemas.base import ValidationErrorDetail
 
 
+def _extract_integrity_error_message(exc: IntegrityError) -> str:
+    orig_message = str(getattr(exc, "orig", exc)).strip()
+    if not orig_message:
+        return "Database integrity error"
+
+    lowered = orig_message.lower()
+    if "not null constraint failed" in lowered:
+        return orig_message
+    if "unique constraint failed" in lowered:
+        return orig_message
+    if "foreign key constraint failed" in lowered:
+        return orig_message
+    if "check constraint failed" in lowered:
+        return orig_message
+
+    return f"Database integrity error: {orig_message}"
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     def json_error_response(
         status_code: int,
@@ -36,17 +54,13 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(IntegrityError)
     async def _(request: Request, exc: IntegrityError):
+        message = _extract_integrity_error_message(exc)
         return JSONResponse(
             status_code=400,
-            content={
-                "success": False,
-                "error": {
-                    "statusCode": 400,
-                    "message": "Database integrity error",
-                    "details": [],
-                },
-                "data": None,
-            },
+            content=error_response(
+                status_code=400,
+                message=message,
+            ).model_dump(),
         )
 
     # 處理 request schema 驗證失敗，例如缺欄位、型別錯、EmailStr 格式錯
