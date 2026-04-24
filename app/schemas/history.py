@@ -1,12 +1,14 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.enums.history import HistorySource, HistoryStatus
 from app.core.enums.medication import DosageForm
 from app.core.enums.schedule import DosageUnit
 from app.schemas.base import PaginationRequest, PaginationResponse
+from app.validation.rules import MEMO_RULE
+from app.validation.validators import validate_by_rule
 
 
 class HistoryResponse(BaseModel):
@@ -105,6 +107,13 @@ class EditHistoryBody(BaseModel):
     taken_amount: int | None = None
     memo: str | None = None
     feeling: int | None = None
+
+    @field_validator("memo")
+    @classmethod
+    def validate_memo(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_by_rule(value, MEMO_RULE)
 
 
 class EditHistoryPayload(EditHistoryBody):

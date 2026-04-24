@@ -7,10 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.datetime import ensure_utc_datetime, require_utc_datetime
 from app.core.enums.history import HistorySource, HistoryStatus
 from app.core.enums.medication import DosageForm
-from app.core.validation_rules import (
-    MEDICATION_NOTE_MAX_LENGTH,
-    MEDICATION_NOTE_MIN_LENGTH,
-)
+from app.validation.rules import MEMO_RULE
 from app.core.validators import validate_optional_string_field
 from app.models import History
 from app.repositories.history import (
@@ -292,8 +289,7 @@ def update_history(
         normalized_memo = validate_optional_string_field(
             value=payload.memo,
             field_name="memo",
-            min_length=MEDICATION_NOTE_MIN_LENGTH,
-            max_length=MEDICATION_NOTE_MAX_LENGTH,
+            rule=MEMO_RULE,
             trim=True,
             empty_as_none=True,
         )

@@ -8,7 +8,7 @@ from app.models import CareRelationship, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.patient import ListPatientsQuery
 from app.core.validators import validate_optional_string_field
-from app.core.validation_rules import NAME_MAX_LENGTH, NAME_MIN_LENGTH
+from app.validation.rules import NAME_RULE
 
 
 def _get_order_column(query: ListPatientsQuery):
@@ -37,8 +37,7 @@ def _build_list_stmt(query: ListPatientsQuery):
     normalized_search = validate_optional_string_field(
         field_name="search",
         value=query.search,
-        min_length=NAME_MIN_LENGTH,
-        max_length=NAME_MAX_LENGTH,
+        rule=NAME_RULE,
         trim=True,
         empty_as_none=True,
     )

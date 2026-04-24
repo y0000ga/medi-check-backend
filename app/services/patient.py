@@ -2,12 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.core.datetime import ensure_utc_datetime
 from app.core.enums.care_relationship import PermissionLevel
-from app.core.validation_rules import (
-    AVATAR_URL_MAX_LENGTH,
-    AVATAR_URL_MIN_LENGTH,
-    NAME_MAX_LENGTH,
-    NAME_MIN_LENGTH,
-)
+from app.validation.rules import AVATAR_URL_RULE, NAME_RULE
 from app.core.validators import (
     validate_optional_string_field,
     validate_required_string_field,
@@ -100,15 +95,13 @@ def add_new_patient(
     normalized_name = validate_required_string_field(
         value=payload.name,
         field_name="name",
-        min_length=NAME_MIN_LENGTH,
-        max_length=NAME_MAX_LENGTH,
+        rule=NAME_RULE,
         trim=True,
     )
     normalized_avatar_url = validate_optional_string_field(
         value=payload.avatar_url,
         field_name="avatar_url",
-        min_length=AVATAR_URL_MIN_LENGTH,
-        max_length=AVATAR_URL_MAX_LENGTH,
+        rule=AVATAR_URL_RULE,
         trim=True,
         empty_as_none=True,
     )

@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from app.core.enums.care_relationship import PermissionLevel
 from app.schemas.base import PaginationRequest, PaginationResponse
+from app.validation.rules import AVATAR_URL_RULE, NAME_RULE
+from app.validation.validators import validate_by_rule
 
 
 class PatientResponse(BaseModel):
@@ -64,6 +66,18 @@ class CreatePatientBody(BaseModel):
     name: str
     avatar_url: str | None = None
     birth_date: datetime | None = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return validate_by_rule(value, NAME_RULE)
+
+    @field_validator("avatar_url")
+    @classmethod
+    def validate_avatar_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_by_rule(value, AVATAR_URL_RULE)
 
 
 class CreatePatientPayload(CreatePatientBody):

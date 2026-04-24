@@ -41,12 +41,7 @@ from app.services.errors.auth import (
     sign_up_failed_error,
     duplicate_email_error,
 )
-from app.core.validation_rules import (
-    NAME_MAX_LENGTH,
-    NAME_MIN_LENGTH,
-    PASSWORD_MAX_LENGTH,
-    PASSWORD_MIN_LENGTH,
-)
+from app.validation.rules import NAME_RULE, PASSWORD_RULE
 from app.core.validators import validate_required_string_field
 from app.services.validators.auth import get_valid_user_session
 from app.services.validators.user import validate_active_user
@@ -66,14 +61,12 @@ def sign_up_user(
         normalized_name = validate_required_string_field(
             value=payload.name,
             field_name="name",
-            min_length=NAME_MIN_LENGTH,
-            max_length=NAME_MAX_LENGTH,
+            rule=NAME_RULE,
         )
         normalized_password = validate_required_string_field(
             value=payload.password,
             field_name="password",
-            min_length=PASSWORD_MIN_LENGTH,
-            max_length=PASSWORD_MAX_LENGTH,
+            rule=PASSWORD_RULE,
         )
 
         hashed_password = hash_password(normalized_password)

@@ -34,7 +34,7 @@ class CareInvitationResponse(BaseModel):
 
 class ListCareInvitationQuery(PaginationRequest):
     user_id: uuid.UUID
-    user_email: str
+    user_email: EmailStr
     direction: CareInvitationDirection | None = None
     status: InvitationStatus | None = None
 
@@ -65,7 +65,7 @@ class CreatePatientInvitationBody(BaseModel):
 class CreateCareInvitationPayload(BaseModel):
     user_id: uuid.UUID
     patient_id: uuid.UUID | None = None
-    invitee_email: str
+    invitee_email: EmailStr
     permission_level: PermissionLevel
     invitation_type: InvitationType
 
@@ -85,7 +85,7 @@ class RevokeCareInvitationResponse(BaseModel):
 
 class DeclineCareInvitationPayload(BaseModel):
     user_id: uuid.UUID
-    user_email: str
+    user_email: EmailStr
     invitation_id: uuid.UUID
 
 
@@ -95,7 +95,7 @@ class DeclineCareInvitationResponse(BaseModel):
 
 class AcceptCareInvitationPayload(BaseModel):
     user_id: uuid.UUID
-    user_email: str
+    user_email: EmailStr
     invitation_id: uuid.UUID
 
 

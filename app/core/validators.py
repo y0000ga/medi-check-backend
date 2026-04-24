@@ -1,5 +1,6 @@
 from app.core.exceptions import AppException
 from app.schemas.base import ValidationErrorDetail
+from app.validation.validators import validate_by_rule
 
 
 def _field_validation_error(field_name: str, message: str, error_type: str) -> AppException:
@@ -23,6 +24,7 @@ def validate_required_string_field(
     min_length: int | None = None,
     max_length: int | None = None,
     trim: bool = True,
+    rule: dict | None = None,
 ) -> str:
     if value is None:
         raise _field_validation_error(
@@ -32,6 +34,17 @@ def validate_required_string_field(
         )
 
     normalized_value = value.strip() if trim else value
+
+    if rule is not None:
+        try:
+            return validate_by_rule(normalized_value, rule)
+        except ValueError as exc:
+            error_type = str(exc)
+            raise _field_validation_error(
+                field_name=field_name,
+                message=f"{field_name} is invalid",
+                error_type=error_type,
+            )
 
     if normalized_value == "":
         raise _field_validation_error(
@@ -63,11 +76,23 @@ def validate_optional_string_field(
     max_length: int | None = None,
     trim: bool = True,
     empty_as_none: bool = False,
+    rule: dict | None = None,
 ) -> str | None:
     if value is None:
         return None
 
     normalized_value = value.strip() if trim else value
+
+    if rule is not None:
+        try:
+            return validate_by_rule(normalized_value, rule)
+        except ValueError as exc:
+            error_type = str(exc)
+            raise _field_validation_error(
+                field_name=field_name,
+                message=f"{field_name} is invalid",
+                error_type=error_type,
+            )
 
     if normalized_value == "":
         if empty_as_none:

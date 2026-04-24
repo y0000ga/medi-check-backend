@@ -6,8 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.enums.care_invitaion import InvitationStatus, InvitationType
 from app.core.enums.care_relationship import PermissionLevel
-from app.core.validation_rules import EMAIL_MAX_LENGTH
 from app.db.base import Base
+from app.validation.rules import EMAIL_RULE
 
 
 class CareInvitation(Base):
@@ -28,7 +28,7 @@ class CareInvitation(Base):
     )
 
     invitee_email: Mapped[str] = mapped_column(
-        String(EMAIL_MAX_LENGTH), nullable=False, index=True
+        String(EMAIL_RULE["max_length"]), nullable=False, index=True
     )
 
     invitee_user_id: Mapped[uuid.UUID | None] = mapped_column(

@@ -1,10 +1,8 @@
 from sqlalchemy.orm import Session
 
-from app.core.validation_rules import (
-    MEDICATION_NAME_MAX_LENGTH,
-    MEDICATION_NAME_MIN_LENGTH,
-    MEDICATION_NOTE_MAX_LENGTH,
-    MEDICATION_NOTE_MIN_LENGTH,
+from app.validation.rules import (
+    MEDICATION_NAME_RULE,
+    MEMO_RULE,
 )
 from app.core.validators import (
     validate_optional_string_field,
@@ -89,8 +87,7 @@ def add_medication(
     normalized_name = validate_required_string_field(
         value=payload.name,
         field_name="name",
-        min_length=MEDICATION_NAME_MIN_LENGTH,
-        max_length=MEDICATION_NAME_MAX_LENGTH,
+        rule=MEDICATION_NAME_RULE,
         trim=True,
     )
     normalized_note = None
@@ -98,8 +95,7 @@ def add_medication(
         normalized_note = validate_optional_string_field(
             value=payload.note,
             field_name="note",
-            min_length=MEDICATION_NOTE_MIN_LENGTH,
-            max_length=MEDICATION_NOTE_MAX_LENGTH,
+            rule=MEMO_RULE,
             trim=True,
         )
 
@@ -145,8 +141,7 @@ def update_medication(
         normalized_name = validate_required_string_field(
             value=payload.name,
             field_name="name",
-            min_length=MEDICATION_NAME_MIN_LENGTH,
-            max_length=MEDICATION_NAME_MAX_LENGTH,
+            rule=MEDICATION_NAME_RULE,
             trim=True,
         )
 
@@ -155,8 +150,7 @@ def update_medication(
         normalized_note = validate_optional_string_field(
             value=payload.note,
             field_name="note",
-            min_length=MEDICATION_NOTE_MIN_LENGTH,
-            max_length=MEDICATION_NOTE_MAX_LENGTH,
+            rule=MEMO_RULE,
             trim=True,
         )
 

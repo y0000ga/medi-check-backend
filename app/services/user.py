@@ -3,12 +3,7 @@ from app.core.datetime import ensure_utc_datetime
 from app.models import User
 from app.repositories.patient import get_patient_by_user_id
 from app.schemas.user import EditUserMeBody, EditUserResponse
-from app.core.validation_rules import (
-    AVATAR_URL_MAX_LENGTH,
-    AVATAR_URL_MIN_LENGTH,
-    NAME_MAX_LENGTH,
-    NAME_MIN_LENGTH,
-)
+from app.validation.rules import AVATAR_URL_RULE, NAME_RULE
 from app.core.validators import validate_optional_string_field
 from app.services.errors.patient import current_user_patient_not_found_error
 from app.services.transactions import db_transaction
@@ -25,16 +20,14 @@ def edit_current_user(
         normalized_name = validate_optional_string_field(
             value=payload.name,
             field_name="name",
-            min_length=NAME_MIN_LENGTH,
-            max_length=NAME_MAX_LENGTH,
+            rule=NAME_RULE,
         )
 
     if payload.avatar_url is not None:
         normalized_avatar_url = validate_optional_string_field(
             value=payload.avatar_url,
             field_name="avatar_url",
-            min_length=AVATAR_URL_MIN_LENGTH,
-            max_length=AVATAR_URL_MAX_LENGTH,
+            rule=AVATAR_URL_RULE,
             empty_as_none=True,
         )
 

@@ -7,11 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.core.enums.history import HistorySource, HistoryStatus
 from app.core.enums.medication import DosageForm
 from app.core.enums.schedule import DosageUnit
-from app.core.validation_rules import (
-    MEDICATION_NAME_MAX_LENGTH,
-    MEDICATION_NOTE_MAX_LENGTH,
-)
 from app.db.base import Base
+from app.validation.rules import MEDICATION_NAME_RULE, MEMO_RULE
 
 
 class History(Base):
@@ -85,14 +82,14 @@ class History(Base):
     taken_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     memo: Mapped[str | None] = mapped_column(
-        String(MEDICATION_NOTE_MAX_LENGTH),
+        String(MEMO_RULE['max_length']),
         nullable=True,
     )
 
     feeling: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     medication_name_snapshot: Mapped[str] = mapped_column(
-        String(MEDICATION_NAME_MAX_LENGTH),
+        String(MEDICATION_NAME_RULE['max_length']),
         nullable=False,
     )
 

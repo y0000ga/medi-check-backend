@@ -4,9 +4,8 @@ from sqlalchemy import Row, delete, func, or_, select
 from sqlalchemy.orm import Session
 from app.core.enums.care_relationship import RelationshipStatus
 from app.core.enums.medication import DosageForm
-from app.core.validation_rules import (
-    MEDICATION_NAME_MAX_LENGTH,
-    MEDICATION_NAME_MIN_LENGTH,
+from app.validation.rules import (
+    MEDICATION_NAME_RULE,
 )
 from app.models import CareRelationship, Medication, Patient
 from app.repositories.helpers import apply_pagination, apply_sort_order
@@ -47,8 +46,7 @@ def _build_list_stmt(query: ListMedicationQuery):
     normalized_search = validate_optional_string_field(
         field_name="search",
         value=query.search,
-        max_length=MEDICATION_NAME_MAX_LENGTH,
-        min_length=MEDICATION_NAME_MIN_LENGTH,
+        rule=MEDICATION_NAME_RULE,
         trim=True,
         empty_as_none=True,
     )

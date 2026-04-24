@@ -1,9 +1,9 @@
 import uuid
 
 from app.core.enums.medication import DosageForm
-from app.core.validation_rules import (
-    MEDICATION_NAME_MAX_LENGTH,
-    MEDICATION_NOTE_MAX_LENGTH,
+from app.validation.rules import (
+    MEDICATION_NAME_RULE,
+    MEMO_RULE,
 )
 from app.db.base import Base
 
@@ -27,14 +27,14 @@ class Medication(Base):
     )
 
     name: Mapped[str] = mapped_column(
-        String(MEDICATION_NAME_MAX_LENGTH), nullable=False
+        String(MEDICATION_NAME_RULE["max_length"]), nullable=False
     )
 
     # 劑型
     dosage_form: Mapped[DosageForm] = mapped_column(Enum(DosageForm), nullable=False)
 
     note: Mapped[str] = mapped_column(
-        String(MEDICATION_NOTE_MAX_LENGTH), nullable=False, default=""
+        String(MEMO_RULE["max_length"]), nullable=False, default=""
     )
 
     # 創建時間

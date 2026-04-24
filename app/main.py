@@ -10,6 +10,7 @@ from app.api.routes import (
     patient_router,
     schedule_router,
     user_router,
+    config_router
 )
 from app.core.exception_handlers import register_exception_handlers
 
@@ -44,3 +45,4 @@ app.include_router(care_relationship_router)
 app.include_router(history_router)
 app.include_router(medication_router)
 app.include_router(schedule_router)
+app.include_router(config_router)

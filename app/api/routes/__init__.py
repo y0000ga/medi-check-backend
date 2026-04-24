@@ -6,6 +6,7 @@ from app.api.routes.medication import router as medication_router
 from app.api.routes.patient import router as patient_router
 from app.api.routes.schedule import router as schedule_router
 from app.api.routes.user import router as user_router
+from app.api.routes.config import router as config_router
 
 __all__ = [
     "auth_router",
@@ -16,4 +17,5 @@ __all__ = [
     "patient_router",
     "schedule_router",
     "user_router",
+    "config_router"
 ]

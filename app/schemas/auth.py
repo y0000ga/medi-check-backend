@@ -1,10 +1,17 @@
 import uuid
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
+from app.validation.rules import NAME_RULE, PASSWORD_RULE
+from app.validation.validators import validate_by_rule
 
 
 class AuthBodyBase(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return validate_by_rule(value, PASSWORD_RULE)
 
 
 class AuthPublicResponse(BaseModel):
@@ -18,6 +25,11 @@ class AuthServiceResult(AuthPublicResponse):
 
 class SignUpBody(AuthBodyBase):
     name: str
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        return validate_by_rule(value, NAME_RULE)
 
 
 class SignUpPayload(SignUpBody):
