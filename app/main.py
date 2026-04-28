@@ -13,18 +13,19 @@ from app.api.routes import (
     config_router
 )
 from app.core.exception_handlers import register_exception_handlers
+from app.core.settings import get_settings
 
 app = FastAPI(title="Medi-Check-Backend", version="0.1.0")
 
 register_exception_handlers(app)
 
+settings = get_settings()
+cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+
 # CORS 問題
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

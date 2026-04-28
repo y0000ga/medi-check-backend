@@ -1,37 +1,36 @@
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 from sqlalchemy import Row, func, select
 from sqlalchemy.orm import Session
 
 from app.core.enums.care_relationship import PermissionLevel, RelationshipStatus
-from app.models import CareRelationship, Patient
+from app.core.validators import validate_optional_string_field
+from app.models import CareRelationship, Patient, User
 from app.repositories.helpers import apply_pagination, apply_sort_order
 from app.schemas.patient import ListPatientsQuery
-from app.core.validators import validate_optional_string_field
 from app.validation.rules import NAME_RULE
 
 
 def _get_order_column(query: ListPatientsQuery):
-    if query.sort_by == "updated_at":
-        return CareRelationship.updated_at
+    if query.sort_by == "name":
+        return Patient.name
+    if query.sort_by == "birth_date":
+        return Patient.birth_date
     return CareRelationship.created_at
 
 
 def _build_list_stmt(query: ListPatientsQuery):
     stmt = (
-        # 查詢要回兩個東西：Patient 這整個 ORM 物件，CareRelationship.permission_level 這個欄位值
-        # (patient, permission_level)
-        select(Patient, CareRelationship.permission_level).join(
-            # 把 Patient 跟 CareRelationship 兩張表接起來查，先從 Patient 出發，再去找跟它對得上的 CareRelationship
+        select(Patient, CareRelationship.permission_level, User.name)
+        .join(
             CareRelationship,
-            # 這筆 relationship 是屬於這個 patient 的
             (CareRelationship.patient_id == Patient.id)
-            # 只要目前這個 caregiver 的 relationship
             & (CareRelationship.caregiver_user_id == query.user_id)
-            # 只要尚未被撤銷的 relationship
             & (CareRelationship.revoked_at.is_(None))
             & (CareRelationship.status.is_not(RelationshipStatus.REVOKED)),
         )
+        .outerjoin(User, User.id == Patient.linked_user_id)
     )
 
     normalized_search = validate_optional_string_field(
@@ -48,6 +47,12 @@ def _build_list_stmt(query: ListPatientsQuery):
     return stmt
 
 
+def _build_detail_stmt(patient_id: uuid.UUID):
+    return select(Patient, User.name).outerjoin(User, User.id == Patient.linked_user_id).where(
+        Patient.id == patient_id
+    )
+
+
 def create_patient(
     db: Session,
     *,
@@ -55,12 +60,14 @@ def create_patient(
     name: str,
     birth_date: datetime | None,
     avatar_url: str | None,
+    note: str | None,
 ) -> Patient:
     patient = Patient(
         linked_user_id=linked_user_id,
         name=name,
         birth_date=birth_date,
         avatar_url=avatar_url,
+        note=note,
     )
     db.add(patient)
     db.flush()
@@ -73,6 +80,7 @@ def create_patient_for_user(
     name: str,
     birth_date: datetime | None = None,
     avatar_url: str | None = None,
+    note: str | None = None,
 ) -> Patient:
     return create_patient(
         db=db,
@@ -80,6 +88,7 @@ def create_patient_for_user(
         name=name,
         birth_date=birth_date,
         avatar_url=avatar_url,
+        note=note,
     )
 
 
@@ -93,41 +102,63 @@ def get_patient_by_id(db: Session, patient_id: uuid.UUID) -> Patient | None:
     return result.scalar_one_or_none()
 
 
+def get_patient_detail_row(
+    db: Session, patient_id: uuid.UUID
+) -> Row[tuple[Patient, str | None]] | None:
+    result = db.execute(_build_detail_stmt(patient_id))
+    return result.first()
+
+
 def list_patients(
     db: Session, query: ListPatientsQuery
-) -> list[Row[tuple[Patient, PermissionLevel]]]:
+) -> list[Row[tuple[Patient, PermissionLevel, str | None]]]:
     stmt = _build_list_stmt(query)
     order_column = _get_order_column(query)
     stmt = apply_sort_order(
         stmt, order_column=order_column, sort_order=query.sort_order
     )
     stmt = apply_pagination(stmt=stmt, page=query.page, page_size=query.page_size)
-
-    result = db.execute(stmt)
-
-    # (patient, permission_level)
-    # result.scalars().all() 只取第一個
-    # result.all() 取全部
-    rows = result.all()
-    return list(rows)
+    return list(db.execute(stmt).all())
 
 
 def list_patient_options(
     db: Session, query: ListPatientsQuery
-) -> list[Row[tuple[Patient, PermissionLevel]]]:
+) -> list[Row[tuple[Patient, PermissionLevel, str | None]]]:
     stmt = _build_list_stmt(query)
     order_column = _get_order_column(query)
     stmt = apply_sort_order(
         stmt, order_column=order_column, sort_order=query.sort_order
     )
-    result = db.execute(stmt)
-    return list(result.all())
+    return list(db.execute(stmt).all())
 
 
 def count_patients(db: Session, query: ListPatientsQuery) -> int:
     stmt = _build_list_stmt(query)
-    # with_only_columns(func.count()) 代表查總數
-    # order_by(None) 代表不排序
     stmt = stmt.with_only_columns(func.count()).order_by(None)
-
     return db.scalar(stmt) or 0
+
+
+def update_patient(
+    db: Session,
+    *,
+    patient_id: uuid.UUID,
+    name: str | None = None,
+    birth_date: datetime | None = None,
+    avatar_url: str | None = None,
+    note: str | None = None,
+) -> Patient | None:
+    patient = get_patient_by_id(db=db, patient_id=patient_id)
+    if patient is None:
+        return None
+
+    if name is not None:
+        patient.name = name
+    if birth_date is not None:
+        patient.birth_date = birth_date
+    if avatar_url is not None:
+        patient.avatar_url = avatar_url
+    if note is not None:
+        patient.note = note
+
+    db.flush()
+    return patient

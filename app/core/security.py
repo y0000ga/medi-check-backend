@@ -6,6 +6,7 @@ from fastapi.security import HTTPBearer
 from jose import JWTError, ExpiredSignatureError, jwt
 from passlib.context import CryptContext
 
+from app.core.settings import get_settings
 from app.services.errors.auth import (
     expired_refresh_token_error,
     invalid_refresh_token_error,
@@ -22,11 +23,13 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
 
-REFRESH_SECRET_KEY = "your-secret-key"
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+_settings = get_settings()
 
-ACCESS_SECRET_KEY = "your-secret-key"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
+REFRESH_SECRET_KEY = _settings.jwt_secret_key
+REFRESH_TOKEN_EXPIRE_DAYS = _settings.jwt_refresh_token_expire_days
+
+ACCESS_SECRET_KEY = _settings.jwt_secret_key
+ACCESS_TOKEN_EXPIRE_MINUTES = _settings.jwt_access_token_expire_minutes
 
 bearer_scheme = HTTPBearer(
     auto_error=False,

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from pydantic import BaseModel, EmailStr, field_validator
 from app.validation.rules import NAME_RULE, PASSWORD_RULE
 from app.validation.validators import validate_by_rule
@@ -19,12 +20,13 @@ class AuthPublicResponse(BaseModel):
     access_token: str
 
 
-class AuthServiceResult(AuthPublicResponse):
+class AuthTokenResponse(AuthPublicResponse):
     refresh_token: str
 
 
 class SignUpBody(AuthBodyBase):
     name: str
+    birth_date: datetime | None = None
 
     @field_validator("name")
     @classmethod
@@ -36,11 +38,11 @@ class SignUpPayload(SignUpBody):
     pass
 
 
-class SignUpServiceResult(AuthServiceResult):
+class SignUpServiceResult(AuthTokenResponse):
     pass
 
 
-class SignUpResponse(AuthPublicResponse):
+class SignUpResponse(AuthTokenResponse):
     pass
 
 
@@ -52,11 +54,11 @@ class SignInPayload(SignInBody):
     pass
 
 
-class SignInServiceResult(AuthServiceResult):
+class SignInServiceResult(AuthTokenResponse):
     pass
 
 
-class SignInResponse(AuthPublicResponse):
+class SignInResponse(AuthTokenResponse):
     pass
 
 
@@ -67,11 +69,11 @@ class RefreshPayload(BaseModel):
     refresh_token: str
 
 
-class RefreshServiceResult(AuthServiceResult):
+class RefreshServiceResult(AuthTokenResponse):
     pass
 
 
-class RefreshResponse(AuthPublicResponse):
+class RefreshResponse(AuthTokenResponse):
     pass
 
 

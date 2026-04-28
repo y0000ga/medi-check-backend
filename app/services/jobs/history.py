@@ -81,7 +81,7 @@ def create_missed_histories(
                         status=HistoryStatus.missed,
                         source=HistorySource.system,
                         taken_amount=None,
-                        memo=None,
+                        note=None,
                         feeling=None,
                         medication_name_snapshot=medication.name,
                         medication_dosage_form_snapshot=medication.dosage_form,

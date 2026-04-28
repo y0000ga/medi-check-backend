@@ -46,6 +46,6 @@ def get_validation_metadata():
             "password": to_public_rule(PASSWORD_RULE),
             "avatar_url": to_public_rule(AVATAR_URL_RULE),
             "medication_name": to_public_rule(MEDICATION_NAME_RULE),
-            "memo": to_public_rule(MEMO_RULE),
+            "note": to_public_rule(MEMO_RULE),
         },
     }

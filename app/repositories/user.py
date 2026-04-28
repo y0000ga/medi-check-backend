@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -15,11 +16,18 @@ def get_user_by_id(db: Session, user_id: uuid.UUID) -> User | None:
     return db.scalar(select(User).where(User.id == user_id))
 
 
-def create_user(db: Session, email: EmailStr, name: str, password_hash: str) -> User:
+def create_user(
+    db: Session,
+    email: EmailStr,
+    name: str,
+    password_hash: str,
+    birth_date: datetime | None = None,
+) -> User:
     user = User(
         email=email,
         name=name,
         password_hash=password_hash,
+        birth_date=birth_date,
     )
     db.add(user)
     # 在 object 建立或 Flush 時，會可以拿到 id 值

@@ -47,7 +47,7 @@ class HistoryListItemResponse(HistoryResponse):
 
 
 class HistoryDetailResponse(HistoryListItemResponse):
-    memo: str | None
+    note: str | None
     feeling: int | None
 
 
@@ -105,12 +105,12 @@ class QuickCheckHistoryResponse(BaseModel):
 class EditHistoryBody(BaseModel):
     intake_at: datetime | None = None
     taken_amount: int | None = None
-    memo: str | None = None
+    note: str | None = None
     feeling: int | None = None
 
-    @field_validator("memo")
+    @field_validator("note")
     @classmethod
-    def validate_memo(cls, value: str | None) -> str | None:
+    def validate_note(cls, value: str | None) -> str | None:
         if value is None:
             return value
         return validate_by_rule(value, MEMO_RULE)

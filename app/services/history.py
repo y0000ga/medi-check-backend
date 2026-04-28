@@ -198,7 +198,7 @@ def get_history_detail(
             amount=history.amount_snapshot,
             dose_unit=history.dose_unit_snapshot,
         ),
-        memo=history.memo,
+        note=history.note,
         feeling=history.feeling,
     )
 
@@ -259,7 +259,7 @@ def add_quick_check_history(
                 status=status,
                 source=HistorySource.quickCheck,
                 taken_amount=schedule.amount,
-                memo=None,
+                note=None,
                 feeling=None,
                 medication_name_snapshot=access.medication.name,
                 medication_dosage_form_snapshot=access.medication.dosage_form,
@@ -284,11 +284,11 @@ def update_history(
     if "intake_at" in payload.model_fields_set:
         normalized_intake_at = ensure_utc_datetime(payload.intake_at)
 
-    normalized_memo = None
-    if "memo" in payload.model_fields_set:
-        normalized_memo = validate_optional_string_field(
-            value=payload.memo,
-            field_name="memo",
+    normalized_note = None
+    if "note" in payload.model_fields_set:
+        normalized_note = validate_optional_string_field(
+            value=payload.note,
+            field_name="note",
             rule=MEMO_RULE,
             trim=True,
             empty_as_none=True,
@@ -327,8 +327,8 @@ def update_history(
         if "taken_amount" in payload.model_fields_set:
             history.taken_amount = payload.taken_amount
 
-        if "memo" in payload.model_fields_set:
-            history.memo = normalized_memo
+        if "note" in payload.model_fields_set:
+            history.note = normalized_note
 
         if "feeling" in payload.model_fields_set:
             history.feeling = payload.feeling

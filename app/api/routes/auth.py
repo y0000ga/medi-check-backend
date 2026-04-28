@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -16,12 +16,6 @@ from app.schemas.auth import (
 from app.schemas.base import ApiResponse
 from app.core.response import success_response
 from app.services.auth import sign_up_user, sign_in_user, refresh_user, logout_user
-from app.dependencies.auth import (
-    get_refresh_token_from_cookie,
-    set_refresh_token_cookie,
-    clear_refresh_token_cookie,
-)
-
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
@@ -33,17 +27,16 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def sign_in(
     body: SignInBody,
     request: Request,
-    response: Response,
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignInResponse]:
     payload = SignInPayload(email=body.email, password=body.password)
 
     result = sign_in_user(payload=payload, request=request, db=db)
 
-    set_refresh_token_cookie(response, result.refresh_token)
-
     sign_in_response = SignInResponse(
-        user_id=result.user_id, access_token=result.access_token
+        user_id=result.user_id,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
     )
     return success_response(sign_in_response)
 
@@ -58,18 +51,21 @@ def sign_in(
 def sign_up(
     body: SignUpBody,
     request: Request,
-    response: Response,
     db: Session = Depends(get_db),
 ) -> ApiResponse[SignUpResponse]:
     payload = SignUpPayload(
-        name=body.name, password=body.password, email=body.email
+        name=body.name,
+        birth_date=body.birth_date,
+        password=body.password,
+        email=body.email,
     )
 
     result = sign_up_user(payload=payload, request=request, db=db)
-    set_refresh_token_cookie(response, result.refresh_token)
 
     sign_up_response = SignUpResponse(
-        user_id=result.user_id, access_token=result.access_token
+        user_id=result.user_id,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
     )
 
     return success_response(sign_up_response)
@@ -79,19 +75,16 @@ def sign_up(
 # 後端查 user_sessions.refresh_token_hash，合法才發新的 access_token
 @router.post("/refresh")
 def refresh(
+    payload: RefreshPayload,
     request: Request,
-    response: Response,
     db: Session = Depends(get_db),
 ) -> ApiResponse[RefreshResponse]:
-    refresh_token = get_refresh_token_from_cookie(request=request)
-    payload = RefreshPayload(refresh_token=refresh_token)
-
     result = refresh_user(payload=payload, request=request, db=db)
 
-    set_refresh_token_cookie(response, result.refresh_token)
-
     refresh_response = RefreshResponse(
-        user_id=result.user_id, access_token=result.access_token
+        user_id=result.user_id,
+        access_token=result.access_token,
+        refresh_token=result.refresh_token,
     )
 
     return success_response(refresh_response)
@@ -100,16 +93,10 @@ def refresh(
 # 登出
 @router.post("/logout")
 def logout(
-    request: Request,
-    response: Response,
+    payload: LogoutPayload,
     db: Session = Depends(get_db),
 ) -> ApiResponse[None]:
-    refresh_token = get_refresh_token_from_cookie(request=request)
-    payload = LogoutPayload(refresh_token=refresh_token)
-
     logout_user(payload=payload, db=db)
-
-    clear_refresh_token_cookie(response=response)
 
     return success_response(None)
 

@@ -1,8 +1,8 @@
-"""create init table
+"""your message
 
-Revision ID: 7d1c6f60dc2c
+Revision ID: 252ff9368fc8
 Revises: 
-Create Date: 2026-04-09 04:01:39.723686
+Create Date: 2026-04-26 23:24:16.951759
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7d1c6f60dc2c'
+revision: str = '252ff9368fc8'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -147,10 +147,10 @@ def upgrade() -> None:
     sa.Column('scheduled_at_snapshot', sa.DateTime(timezone=True), nullable=False),
     sa.Column('intake_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('status', sa.Enum('pending', 'taken', 'missed', name='historystatus'), nullable=False),
-    sa.Column('taken_amount', sa.Integer(), nullable=True),
-    sa.Column('memo', sa.String(length=500), nullable=True),
-    sa.Column('feeling', sa.Integer(), nullable=True),
     sa.Column('source', sa.Enum('manual', 'quickCheck', 'system', name='historysource'), nullable=False),
+    sa.Column('taken_amount', sa.Integer(), nullable=True),
+    sa.Column('note', sa.String(length=500), nullable=True),
+    sa.Column('feeling', sa.Integer(), nullable=True),
     sa.Column('medication_name_snapshot', sa.String(length=100), nullable=False),
     sa.Column('medication_dosage_form_snapshot', sa.Enum('Tablet', 'Capsule', 'Softgel', 'Liquid', 'Powder', 'Pill', 'Spray', name='dosageform'), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),

@@ -28,7 +28,7 @@ from app.services.history import (
     update_history,
 )
 
-router = APIRouter()
+router = APIRouter(tags=['history'])
 
 
 @router.get("/histories")

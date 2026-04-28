@@ -81,7 +81,7 @@ class History(Base):
 
     taken_amount: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    memo: Mapped[str | None] = mapped_column(
+    note: Mapped[str | None] = mapped_column(
         String(MEMO_RULE['max_length']),
         nullable=True,
     )
