@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: medi-check-migrate
+spec:
+  template:
+    spec:
+      serviceAccountName: medi-check-migrate
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: migrate
+          image: asia-east1-docker.pkg.dev/medi-check-backend/medi-check-repo/app:v3
+          command:
+            [
+              "sh",
+              "-c",
+              "python - <<'PY'\nimport socket\nimport sys\nimport time\n\nhost = '127.0.0.1'\nport = 5432\nfor attempt in range(60):\n    try:\n        with socket.create_connection((host, port), timeout=1):\n            break\n    except OSError:\n        time.sleep(2)\nelse:\n    sys.exit('cloud-sql-proxy was not ready on 127.0.0.1:5432')\nPY\nuv run alembic upgrade head",
+            ]
+          envFrom:
+            - secretRef:
+                name: medi-check-db-secret
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg://medi_check_user:CHANGE_ME@127.0.0.1:5432/medi_check
+
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2
+          args:
+            - "--address=127.0.0.1"
+            - "--port=5432"
+            - "medi-check-backend:asia-east1:medi-check-postgres"

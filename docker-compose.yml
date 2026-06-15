@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: medi-check-postgres
+    environment:
+      POSTGRES_DB: medi_check
+      POSTGRES_USER: medi_check_user
+      POSTGRES_PASSWORD: medi_check_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - medi_check_pg_data:/var/lib/postgresql/data
+
+volumes:
+  medi_check_pg_data:

@@ -166,11 +166,9 @@ Attach the Cloud SQL instance using the instance connection name.
 Suggested trigger flow:
 
 1. Create a Cloud Build trigger on your main branch.
-2. Point the trigger to [`cloudbuild.yaml`](cloudbuild.yaml).
+2. Point the trigger to [`cloudbuild.yaml`](../cloudbuild.yaml).
 3. Configure the trigger to build on push to `main`.
 4. Use the resulting image tag in your deployment step.
-
-If you want a fully automatic release, keep the build trigger and add a second deployment step in your release pipeline, or use the GitHub Actions workflow in this repository.
 
 #### Cloud Build Trigger setup in the console
 
@@ -190,17 +188,9 @@ If you want a fully automatic release, keep the build trigger and add a second d
 11. Push a commit to the selected branch to verify that the image is built and pushed to Artifact Registry.
 12. Copy the resulting image URI and pass it to the release step.
 
-What you should see after a successful build:
-
-- A new image tag in Artifact Registry
-- A Cloud Build execution record with build and push steps only
-- No Cloud Run deployment from this trigger
-
-If you want the release to happen automatically after the build, create a separate release workflow or use the GitHub Actions release template below.
-
 ### Cloud Run deployment
 
-Use the helper script in [`deploy/gcloud-deploy.ps1`](deploy/gcloud-deploy.ps1) for manual deployment.
+Use the helper script in [`../deploy/gcloud-deploy.ps1`](../deploy/gcloud-deploy.ps1) for manual deployment.
 
 Example deployment command:
 
@@ -209,8 +199,7 @@ Example deployment command:
   -ProjectId YOUR_PROJECT_ID `
   -Region asia-east1 `
   -ServiceName medi-check-backend `
-  -ImageName medi-check-backend `
-  -ArtifactRegistryRepo medi-check-backend `
+  -ImageUri asia-east1-docker.pkg.dev/YOUR_PROJECT_ID/medi-check-backend/medi-check-backend:YOUR_TAG `
   -CloudSqlInstanceConnectionName YOUR_PROJECT_ID:asia-east1:medi-check-db `
   -DatabaseUrlSecret DATABASE_URL:latest `
   -SecretKeySecret SECRET_KEY:latest `
@@ -227,7 +216,7 @@ Example deployment command:
 
 ## GitHub Actions
 
-Use [`.github/workflows/build-image.yml`](.github/workflows/build-image.yml) for image build and push.
+Use [../.github/workflows/build-image.yml](../.github/workflows/build-image.yml) for image build and push.
 
 Required GitHub configuration:
 
@@ -236,7 +225,7 @@ Required GitHub configuration:
 - `secrets.GCP_SERVICE_ACCOUNT_EMAIL`
 
 The build workflow pushes the image to Artifact Registry.
-The release workflow is automatic and is defined in [`.github/workflows/release-cloudrun.yml`](.github/workflows/release-cloudrun.yml).
+The release workflow is automatic and is defined in [../.github/workflows/release-cloudrun.yml](../.github/workflows/release-cloudrun.yml).
 
 ### Release workflow template
 
@@ -245,15 +234,13 @@ The release workflow is automatic and is defined in [`.github/workflows/release-
 3. The release workflow receives the completed build event.
 4. Cloud Run deploys the image tagged with the same commit SHA.
 
-If you need a manual release, use [`deploy/gcloud-deploy.ps1`](deploy/gcloud-deploy.ps1) with an explicit image URI.
+If you need a manual release, use [`../deploy/gcloud-deploy.ps1`](../deploy/gcloud-deploy.ps1) with an explicit image URI.
 
 Example image URI:
 
 ```text
 asia-east1-docker.pkg.dev/YOUR_PROJECT_ID/medi-check-backend/medi-check-backend:YOUR_TAG
 ```
-
-Confirm that the workflow deploys the image to Cloud Run.
 
 ## Troubleshooting
 
@@ -300,4 +287,3 @@ Confirm that the workflow deploys the image to Cloud Run.
 - Keep `CORS_ORIGINS` aligned with your frontend domain.
 - Keep all production secrets in Secret Manager.
 - Run migrations before exposing the service to real traffic.
-- `service.yaml` is a legacy manifest kept for reference only and is not part of the current Cloud Run deployment flow.

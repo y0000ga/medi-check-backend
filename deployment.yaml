@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: medi-check-backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: medi-check-backend
+  template:
+    metadata:
+      labels:
+        app: medi-check-backend
+    spec:
+      serviceAccountName: medi-check-backend
+      containers:
+        - name: medi-check
+          image: asia-east1-docker.pkg.dev/medi-check-backend/medi-check-repo/app:v3
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: medi-check-db-secret
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+
+        - name: cloud-sql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2
+          args:
+            - "--port=5432"
+            - "medi-check-backend:asia-east1:medi-check-postgres"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"

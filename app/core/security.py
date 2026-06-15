@@ -25,10 +25,10 @@ ALGORITHM = "HS256"
 
 _settings = get_settings()
 
-REFRESH_SECRET_KEY = _settings.jwt_secret_key
+REFRESH_SECRET_KEY = _settings.jwt_refresh_secret_key
 REFRESH_TOKEN_EXPIRE_DAYS = _settings.jwt_refresh_token_expire_days
 
-ACCESS_SECRET_KEY = _settings.jwt_secret_key
+ACCESS_SECRET_KEY = _settings.jwt_access_secret_key
 ACCESS_TOKEN_EXPIRE_MINUTES = _settings.jwt_access_token_expire_minutes
 
 bearer_scheme = HTTPBearer(

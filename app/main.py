@@ -5,24 +5,24 @@ from app.api.routes import (
     auth_router,
     care_invitation_router,
     care_relationship_router,
+    config_router,
     history_router,
     medication_router,
     patient_router,
     schedule_router,
     user_router,
-    config_router
 )
 from app.core.exception_handlers import register_exception_handlers
 from app.core.settings import get_settings
+from app.db.session import ping_db
 
 app = FastAPI(title="Medi-Check-Backend", version="0.1.0")
 
 register_exception_handlers(app)
 
 settings = get_settings()
-cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+cors_origins = settings.cors_origins_list
 
-# CORS 問題
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -37,7 +37,17 @@ def health_check():
     return {"status": "ok"}
 
 
-# 掛上 API
+@app.get("/health/live")
+def health_live():
+    return {"status": "ok"}
+
+
+@app.get("/health/ready")
+def health_ready():
+    db_ok = ping_db()
+    return {"status": "ok" if db_ok else "degraded", "db": db_ok}
+
+
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(patient_router)

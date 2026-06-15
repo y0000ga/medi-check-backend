@@ -1,8 +1,8 @@
-"""your message
+"""initial schema
 
-Revision ID: 252ff9368fc8
+Revision ID: d72657003752
 Revises: 
-Create Date: 2026-04-26 23:24:16.951759
+Create Date: 2026-06-10 23:17:52.349361
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '252ff9368fc8'
+revision: str = 'd72657003752'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -41,6 +41,7 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('birth_date', sa.DateTime(timezone=True), nullable=True),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
+    sa.Column('note', sa.String(length=1000), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['linked_user_id'], ['users.id'], ),
@@ -88,7 +89,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('patient_id', sa.Uuid(), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
-    sa.Column('dosage_form', sa.Enum('Tablet', 'Capsule', 'Softgel', 'Liquid', 'Powder', 'Pill', 'Spray', name='dosageform'), nullable=False),
+    sa.Column('dosage_form', sa.Enum('tablet', 'capsule', 'softgel', 'pill', 'liquid', 'syrup', 'suspension', 'drops', 'powder', 'granule', 'sachet', 'injection', 'vial', 'ampoule', 'inhaler', 'spray', 'nebulizer_solution', 'cream', 'ointment', 'gel', 'lotion', 'patch', 'suppository', 'eye_drops', 'ear_drops', 'nasal_spray', 'other', name='dosageform'), nullable=False),
     sa.Column('note', sa.String(length=500), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
@@ -121,7 +122,7 @@ def upgrade() -> None:
     sa.Column('start_date', sa.Date(), nullable=False),
     sa.Column('time_slots', sa.JSON(), nullable=False),
     sa.Column('amount', sa.Integer(), nullable=False),
-    sa.Column('dose_unit', sa.Enum('Mg', 'Ml', 'Tablet', 'Capsule', 'Package', 'Drop', name='dosageunit'), nullable=True),
+    sa.Column('dose_unit', sa.Enum('mcg', 'mg', 'g', 'ml', 'l', 'drop', 'tablet', 'capsule', 'pill', 'packet', 'sachet', 'piece', 'spray', 'puff', 'patch', 'application', 'suppository', 'tsp', 'tbsp', 'cup', 'unit', 'iu', 'meq', 'percent', 'other', name='dosageunit'), nullable=True),
     sa.Column('frequency_unit', sa.Enum('day', 'week', 'month', 'year', name='frequencyunit'), nullable=True),
     sa.Column('interval', sa.Integer(), nullable=True),
     sa.Column('weekdays', sa.JSON(), nullable=True),
@@ -143,7 +144,7 @@ def upgrade() -> None:
     sa.Column('schedule_id', sa.Uuid(), nullable=True),
     sa.Column('medication_id', sa.Uuid(), nullable=True),
     sa.Column('amount_snapshot', sa.Integer(), nullable=False),
-    sa.Column('dose_unit_snapshot', sa.Enum('Mg', 'Ml', 'Tablet', 'Capsule', 'Package', 'Drop', name='dosageunit'), nullable=True),
+    sa.Column('dose_unit_snapshot', sa.Enum('mcg', 'mg', 'g', 'ml', 'l', 'drop', 'tablet', 'capsule', 'pill', 'packet', 'sachet', 'piece', 'spray', 'puff', 'patch', 'application', 'suppository', 'tsp', 'tbsp', 'cup', 'unit', 'iu', 'meq', 'percent', 'other', name='dosageunit'), nullable=True),
     sa.Column('scheduled_at_snapshot', sa.DateTime(timezone=True), nullable=False),
     sa.Column('intake_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('status', sa.Enum('pending', 'taken', 'missed', name='historystatus'), nullable=False),
@@ -152,7 +153,7 @@ def upgrade() -> None:
     sa.Column('note', sa.String(length=500), nullable=True),
     sa.Column('feeling', sa.Integer(), nullable=True),
     sa.Column('medication_name_snapshot', sa.String(length=100), nullable=False),
-    sa.Column('medication_dosage_form_snapshot', sa.Enum('Tablet', 'Capsule', 'Softgel', 'Liquid', 'Powder', 'Pill', 'Spray', name='dosageform'), nullable=True),
+    sa.Column('medication_dosage_form_snapshot', sa.Enum('tablet', 'capsule', 'softgel', 'pill', 'liquid', 'syrup', 'suspension', 'drops', 'powder', 'granule', 'sachet', 'injection', 'vial', 'ampoule', 'inhaler', 'spray', 'nebulizer_solution', 'cream', 'ointment', 'gel', 'lotion', 'patch', 'suppository', 'eye_drops', 'ear_drops', 'nasal_spray', 'other', name='dosageform'), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
     sa.CheckConstraint('amount_snapshot > 0', name='ck_histories_amount_snapshot_positive'),

@@ -11,14 +11,19 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    database_url: str = Field(
-        default="sqlite:///./app.db",
-        alias="DATABASE_URL",
+    database_url: str = Field(alias="DATABASE_URL")
+    secret_key: str = Field(alias="SECRET_KEY")
+    jwt_secret_key: str = Field(alias="JWT_SECRET_KEY")
+    jwt_access_secret_key: str = Field(
+        default="change-me-access",
+        alias="JWT_ACCESS_SECRET_KEY",
     )
-    secret_key: str = Field(default="change-me", alias="SECRET_KEY")
-    jwt_secret_key: str = Field(default="change-me-too", alias="JWT_SECRET_KEY")
+    jwt_refresh_secret_key: str = Field(
+        default="change-me-refresh",
+        alias="JWT_REFRESH_SECRET_KEY",
+    )
     jwt_access_token_expire_minutes: int = Field(
-        default=30,
+        default=3000,
         alias="JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
     )
     jwt_refresh_token_expire_days: int = Field(
@@ -30,6 +35,11 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     environment: str = Field(default="development", alias="ENVIRONMENT")
+    sql_echo: bool = Field(default=False, alias="SQL_ECHO")
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
 
 @lru_cache

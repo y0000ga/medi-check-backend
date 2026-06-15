@@ -1,0 +1,47 @@
+name: Build and Push Image
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: asia-east1
+  AR_REPO: medi-check-backend
+  IMAGE: medi-check-backend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set project
+        run: gcloud config set project $PROJECT_ID
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker $REGION-docker.pkg.dev --quiet
+
+      - name: Build image
+        run: |
+          docker build -t $REGION-docker.pkg.dev/$PROJECT_ID/$AR_REPO/$IMAGE:${{ github.sha }} .
+
+      - name: Push image
+        run: |
+          docker push $REGION-docker.pkg.dev/$PROJECT_ID/$AR_REPO/$IMAGE:${{ github.sha }}

@@ -1,1 +1,27 @@
-Generic single-database configuration.
+Alembic migration directory for Medi Check Backend.
+
+## Purpose
+
+This directory contains database schema migrations used by both local development and production deployments.
+
+## How migrations are run
+
+- Local development: run `uv run alembic upgrade head`
+- Cloud Run deployment: run migrations before releasing traffic
+- CI/CD: make sure the deployment pipeline can access the same `DATABASE_URL` used by the app
+
+## Production notes
+
+- Use the Cloud SQL PostgreSQL instance as the migration target.
+- Keep the database URL in Secret Manager or another secure secret store.
+- Run migrations before deploying a new Cloud Run revision if the schema changed.
+- Do not rely on Cloud Run startup to apply migrations automatically.
+
+## Common commands
+
+```powershell
+uv run alembic current
+uv run alembic history
+uv run alembic upgrade head
+uv run alembic downgrade -1
+```

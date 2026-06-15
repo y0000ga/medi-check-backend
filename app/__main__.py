@@ -1,7 +1,7 @@
 import uvicorn
 
 
-def main():
+def main() -> None:
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

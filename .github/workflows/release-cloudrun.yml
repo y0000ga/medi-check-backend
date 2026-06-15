@@ -1,0 +1,59 @@
+name: Release to Cloud Run
+
+on:
+  workflow_run:
+    workflows:
+      - Build and Push Image
+    types:
+      - completed
+
+env:
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: asia-east1
+  AR_REPO: medi-check-backend
+  IMAGE: medi-check-backend
+  SERVICE: medi-check-backend
+  CLOUDSQL_INSTANCE: PROJECT:REGION:INSTANCE
+  CORS_ORIGINS: https://your-frontend.example.com
+  ENVIRONMENT: production
+  IMAGE_URI: ${{ format('{0}-docker.pkg.dev/{1}/{2}/{3}:{4}', 'asia-east1', vars.GCP_PROJECT_ID, 'medi-check-backend', 'medi-check-backend', github.event.workflow_run.head_sha) }}
+
+jobs:
+  release:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set project
+        run: gcloud config set project $PROJECT_ID
+
+      - name: Verify image exists
+        run: |
+          gcloud artifacts docker images describe $IMAGE_URI
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy $SERVICE \
+            --image $IMAGE_URI \
+            --region $REGION \
+            --platform managed \
+            --allow-unauthenticated \
+            --port 8080 \
+            --add-cloudsql-instances $CLOUDSQL_INSTANCE \
+            --set-env-vars ENVIRONMENT=$ENVIRONMENT,CORS_ORIGINS=$CORS_ORIGINS,SQL_ECHO=false \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,JWT_SECRET_KEY=JWT_SECRET_KEY:latest,JWT_ACCESS_SECRET_KEY=JWT_ACCESS_SECRET_KEY:latest,JWT_REFRESH_SECRET_KEY=JWT_REFRESH_SECRET_KEY:latest

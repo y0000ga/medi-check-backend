@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.response import success_response
+from app.core.enums.care_invitaion import InvitationType
 from app.db.session import get_db
 from app.dependencies.user import get_current_user
 from app.models import User
@@ -65,6 +66,7 @@ def create_caregiver_invitation(
         user_id=user.id,
         invitee_email=body.invitee_email,
         permission_level=body.permission_level,
+        invitation_type=InvitationType.INVITE_CAREGIVER,
     )
     response = add_caregiver_invitation(payload=payload, db=db)
     return success_response(response)
@@ -80,6 +82,7 @@ def create_patient_invitation(
         user_id=user.id,
         invitee_email=body.invitee_email,
         permission_level=body.permission_level,
+        invitation_type=InvitationType.INVITE_PATIENT,
     )
     response = add_patient_invitation(payload=payload, db=db)
     return success_response(response)
