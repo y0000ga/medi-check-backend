@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         alias="JWT_REFRESH_TOKEN_EXPIRE_DAYS",
     )
     cors_origins: str = Field(
-        default="http://localhost:8081,http://127.0.0.1:8081",
+        default="http://localhost:8081,http://127.0.0.1:8081,https://y0000ga.github.io",
         alias="CORS_ORIGINS",
     )
     environment: str = Field(default="development", alias="ENVIRONMENT")

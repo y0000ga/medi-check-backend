@@ -54,6 +54,7 @@ The API listens on port `8080`.
 
 ## API Endpoints
 
+- API Docs: `https://y0000ga.github.io/medi-check-backend/`
 - Swagger UI: `http://localhost:8080/docs`
 - ReDoc: `http://localhost:8080/redoc`
 - Health check: `http://localhost:8080/health`

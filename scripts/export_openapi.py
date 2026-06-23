@@ -34,6 +34,13 @@ def main() -> None:
 
     schema = app.openapi()
 
+    schema["servers"] = [
+        {
+            "url": "https://medi-check-backend-736612398986.asia-east1.run.app",
+            "description": "Production",
+        }
+    ]
+
     OPENAPI_JSON_PATH.write_text(
         json.dumps(schema, ensure_ascii=False, indent=2),
         encoding="utf-8",
