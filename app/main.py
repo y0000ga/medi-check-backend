@@ -16,7 +16,13 @@ from app.core.exception_handlers import register_exception_handlers
 from app.core.settings import get_settings
 from app.db.session import ping_db
 
-app = FastAPI(title="Medi-Check-Backend", version="0.1.0")
+app = FastAPI(
+    title="Medi-Check-Backend",
+    version="0.1.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 register_exception_handlers(app)
 
@@ -35,12 +41,6 @@ app.add_middleware(
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-
-
-@app.get("/health/live")
-def health_live():
-    return {"status": "ok"}
-
 
 @app.get("/health/ready")
 def health_ready():
