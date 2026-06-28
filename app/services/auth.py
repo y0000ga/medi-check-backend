@@ -85,6 +85,7 @@ def sign_up_user(
             value=payload.password,
             field_name="password",
             rule=PASSWORD_RULE,
+            trim=False,
         )
         normalized_birth_date = payload.birth_date
         hashed_password = hash_password(normalized_password)
