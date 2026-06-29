@@ -16,12 +16,17 @@
 app/
   api/routes/         # HTTP 路由
   core/               # 安全、例外處理、共用工具
+    enums/            # 系統列舉值（UserStatus、HistoryStatus 等）
   db/                 # SQLAlchemy Base / Session
   dependencies/       # FastAPI dependency
   models/             # 資料表模型
   repositories/       # DB query
   schemas/            # Pydantic schema
   services/           # 商業邏輯
+    jobs/             # 背景工作邏輯
+    validators/       # Service 層業務驗證
+    errors/           # 各 domain 的 AppException 工廠函式
+  validation/         # 欄位驗證規則（rules.py）與執行器（validators.py）
 migrations/           # Alembic migration
 scripts/              # 輔助腳本
 ```

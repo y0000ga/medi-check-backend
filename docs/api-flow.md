@@ -17,6 +17,8 @@
 - `POST /auth/sign-in`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `POST /auth/forgot-password`（stub，尚未實作）
+- `POST /auth/reset-password`（stub，尚未實作）
 
 ### Token 模型
 
@@ -77,11 +79,19 @@ Request body：
 
 ## 主要資源流程
 
+### Users
+
+支援的端點：
+
+- `GET /users/me`
+- `PATCH /users/me`
+
 ### Patients
 
 支援的端點：
 
 - `GET /patients`
+- `GET /patients/options`
 - `POST /patients`
 - `GET /patients/{patient_id}`
 - `PUT /patients/{patient_id}`
@@ -117,8 +127,31 @@ Request body：
 - `POST /histories/quick-check`
 - `PATCH /histories/{history_id}`
 
+### Care Invitations
+
+支援的端點：
+
+- `GET /care-invitations`
+- `POST /care-invitations/me/caregiver`
+- `POST /care-invitations/me/patient`
+- `POST /care-invitations/{invitation_id}/revoke`
+- `POST /care-invitations/{invitation_id}/decline`
+- `POST /care-invitations/{invitation_id}/accept`
+
+### Care Relationships
+
+支援的端點：
+
+- `GET /care-relationships`
+
+### App Config
+
+支援的端點：
+
+- `GET /app-config/validation`
+
 ## 注意事項
 
-- Web 與 mobile 現在共用相同的 token 合約，透過 response/body 欄位傳遞
-- Mobile client 應將 `access_token` 與 `refresh_token` 存在安全儲存區
-- mobile flow 不再需要依賴 cookie 來處理 refresh token
+- Web 與 mobile 共用相同的 token 合約，透過 response / body 欄位傳遞
+- Mobile client 應將 `access_token` 與 `refresh_token` 存放於安全儲存區
+- mobile flow 不依賴 cookie 處理 refresh token
